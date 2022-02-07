@@ -296,6 +296,8 @@ bool SmryAppl::add_new_series ( int chart_ind, int smry_ind, std::string vect_na
     message = message + " " + QString::fromStdString(root_name_list[smry_ind]);
     message = message + " " + QString::fromStdString(vect_name);
 
+    std::cout << "Add new series: " << vect_name << "\n";
+
     qInfo() << message;
 
     std::vector<float> datav;
@@ -424,6 +426,10 @@ bool SmryAppl::add_new_series ( int chart_ind, int smry_ind, std::string vect_na
 
     float val_p90 = calc_p90 ( datav );
 
+    std::cout << "val_p90   : " << val_p90 << std::endl;
+    std::cout << "multiplier: " << multiplier << std::endl;
+
+
     if ( val_p90 > 1.0e9 ) {
         mult_type = AxisMultiplierType::billion;
         multiplier = 1e-9;
@@ -485,7 +491,7 @@ bool SmryAppl::add_new_series ( int chart_ind, int smry_ind, std::string vect_na
 
         qInfo() << "attach series to new y-axis " << yaxsis_ind ;
 
-        if ( yaxsis_ind==0 )
+        if ( yaxsis_ind == 0 )
             chartList[chart_ind]->addAxis ( axisY[chart_ind][yaxsis_ind], Qt::AlignLeft );
         else
             chartList[chart_ind]->addAxis ( axisY[chart_ind][yaxsis_ind], Qt::AlignRight );
@@ -936,6 +942,7 @@ void SmryAppl::update_axis_range(SmryYaxis* axis){
     // over all min and max values and call
     // -> bool axis->set_range(float min_val, float max_val);
 
+    
     double min_y = +1.0*std::numeric_limits<double>::max();
     double max_y = -1.0*std::numeric_limits<double>::max();
 
@@ -952,6 +959,21 @@ void SmryAppl::update_axis_range(SmryYaxis* axis){
         }
     }
 
+    if (min_y == max_y){
+        
+        if (min_y > 0.0)
+            min_y = 0.0;
+        else
+            max_y = 0.1;    
+
+        adjust_yaxis_props(axis, min_y, max_y);
+
+    }
+    
+    // void SmryAppl::adjust_yaxis_props(SmryYaxis* axis, double& min_data, double& max_data)
+    std::cout << "running: SmryAppl::update_axis_range ";
+    std::cout << min_y << " - " << max_y << std::endl;
+    
     if (!axis->set_range(min_y, max_y)){
 
         if (min_y != max_y) {
