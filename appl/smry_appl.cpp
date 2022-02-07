@@ -296,8 +296,6 @@ bool SmryAppl::add_new_series ( int chart_ind, int smry_ind, std::string vect_na
     message = message + " " + QString::fromStdString(root_name_list[smry_ind]);
     message = message + " " + QString::fromStdString(vect_name);
 
-    std::cout << "Add new series: " << vect_name << "\n";
-
     qInfo() << message;
 
     std::vector<float> datav;
@@ -423,12 +421,7 @@ bool SmryAppl::add_new_series ( int chart_ind, int smry_ind, std::string vect_na
     AxisMultiplierType mult_type;
     float multiplier = 1.0;
 
-
     float val_p90 = calc_p90 ( datav );
-
-    std::cout << "val_p90   : " << val_p90 << std::endl;
-    std::cout << "multiplier: " << multiplier << std::endl;
-
 
     if ( val_p90 > 1.0e9 ) {
         mult_type = AxisMultiplierType::billion;
@@ -967,12 +960,7 @@ void SmryAppl::update_axis_range(SmryYaxis* axis){
             max_y = 0.1;    
 
         adjust_yaxis_props(axis, min_y, max_y);
-
     }
-    
-    // void SmryAppl::adjust_yaxis_props(SmryYaxis* axis, double& min_data, double& max_data)
-    std::cout << "running: SmryAppl::update_axis_range ";
-    std::cout << min_y << " - " << max_y << std::endl;
     
     if (!axis->set_range(min_y, max_y)){
 
