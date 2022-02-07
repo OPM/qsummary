@@ -503,7 +503,7 @@ bool SmryAppl::add_new_series ( int chart_ind, int smry_ind, std::string vect_na
 
             float existing_mult = axisY[chart_ind][yaxsis_ind]->multiplier();
 
-            if ( axisY[chart_ind][yaxsis_ind]->multiplier() < multiplier ) {
+            if ( axisY[chart_ind][yaxsis_ind]->multiplier() != multiplier ) {
 
                 multiplier = existing_mult;
 
