@@ -78,6 +78,7 @@ static void printHelp()
     std::cout << " :pdf [file_name] create pdf file save til file name. \n";
     std::cout << " :m   swhich markers on or off, all series  \n";
     std::cout << " :e   exit application  \n";
+    std::cout << " :ens switch to esemble mode (this part of the code is under construction)  \n";
 
     std::cout << "\ncontrols: \n\n";
 
