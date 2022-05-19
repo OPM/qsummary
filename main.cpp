@@ -855,6 +855,31 @@ int main(int argc, char *argv[])
 
     }
 
+    // make list of summary vectors to be loaded
+
+    std::vector<std::vector<std::string>> smry_pre_load;
+
+    for (size_t n = 0; n < smry_files.size(); n++)
+        smry_pre_load.push_back({});
+
+    for (size_t c = 0; c < input_charts.size(); c++) {
+        auto vect_input = std::get<0>(input_charts[c]);
+
+        for (size_t s = 0; s < vect_input.size(); s++) {
+            auto smry_ind = std::get<0>(vect_input[s]);
+            auto vect_name = std::get<1>(vect_input[s]);
+            smry_pre_load[smry_ind].push_back(vect_name);
+        }
+    }
+
+    for (size_t n = 0; n < smry_files.size(); n++)
+        if (smry_pre_load[n].size() > 0)
+            if (file_type[n] == FileType::SMSPEC)
+                esmry_loader[n]->loadData(smry_pre_load[n]);
+            else if (file_type[n] == FileType::ESMRY)
+                lodsmry_loader[n]->loadData(smry_pre_load[n]);
+
+
     loaders = std::make_tuple(smry_files, file_type, std::move(esmry_loader), std::move(lodsmry_loader));
 
     SmryAppl window(arg_vect, loaders, input_charts);
