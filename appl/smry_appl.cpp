@@ -2188,12 +2188,16 @@ void SmryAppl::keyPressEvent ( QKeyEvent *event )
 
                 axisX[chart_ind]->print_range();
 
-            } else if ( ( cmd_var == ":e" ) || ( cmd_var == ":E" ) ) {
+            } else if ( ( cmd_var == ":ens" ) || ( cmd_var == ":ENS" ) ) {
 
                 ens_mode = true;
                 this->reset_cmdline();
 
                 lbl_rootn->setText ( "Ensemble mode" );
+
+            } else if ( ( cmd_var == ":e" ) || ( cmd_var == ":E" ) ) {
+
+                QApplication::quit(); 
 
             } else {
 
