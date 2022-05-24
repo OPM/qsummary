@@ -43,11 +43,11 @@ void  SmrySeries::onPressed(const QPointF &point)
 
     QPointF p_closest = calculate_closest(point);
 
-    QDateTime dt = QDateTime::fromMSecsSinceEpoch(p_closest.x());
+    QDateTime dt_utc = QDateTime::fromMSecsSinceEpoch(p_closest.x(), Qt::UTC);
 
     qreal yval = p_closest.y();
 
-    QString dt_qstr = dt.toString("yyyy-MM-dd HH:mm:ss");
+    QString dt_qstr = dt_utc.toString("yyyy-MM-dd HH:mm:ss");
 
     std::cout << this->objectName().toStdString() << "  ";
     std::cout <<  dt_qstr.toStdString() << "  " << yval;
@@ -75,18 +75,18 @@ void SmrySeries::onHovered(const QPointF &point, bool state)
 
         QPointF p_closest = calculate_closest(point);
 
-        QDateTime dt = QDateTime::fromMSecsSinceEpoch(p_closest.x());
+        QDateTime dt_utc = QDateTime::fromMSecsSinceEpoch(p_closest.x(), Qt::UTC);
 
-        int ms = dt.time().msec();
+        int ms = dt_utc.time().msec();
 
         double ms_frac = static_cast<double>(ms) / 1000.0;
         double ms_correction = round(ms_frac);
 
-        dt = dt.addMSecs(ms_correction);
+        dt_utc = dt_utc.addMSecs(ms_correction);
 
-        QString qstr = dt.toString("yyyy-MM-dd HH:mm:ss"); // = dt.toString("yyyy-MM-dd HH:mm:ss");
+        QString qstr = dt_utc.toString("yyyy-MM-dd HH:mm:ss"); // = dt.toString("yyyy-MM-dd HH:mm:ss");
 
-        if (dt.isDaylightTime())
+        if (dt_utc.isDaylightTime())
             qstr = qstr + " ( daylight time ) ";
 
         qreal yval = p_closest.y();

@@ -298,6 +298,10 @@ bool SmryAppl::add_new_series ( int chart_ind, int smry_ind, std::string vect_na
 
     qInfo() << message;
 
+
+    //std::cout << "starting adding new series: " << vect_name << " vs TIME \n";
+    //auto start = std::chrono::system_clock::now();
+
     std::vector<float> datav;
 
     std::vector<float> timev;
@@ -309,19 +313,23 @@ bool SmryAppl::add_new_series ( int chart_ind, int smry_ind, std::string vect_na
     else if (m_file_type[smry_ind] == FileType::ESMRY)
         timev = ext_esmry_loader[smry_ind]->get("TIME");
 
+
     std::string smry_unit;
 
     bool hasVect;
     bool all_steps;
 
+    // tskille: note-1 disable all_steps_avaliable
 
     if (m_file_type[smry_ind] == FileType::SMSPEC){
         hasVect = esmry_loader[smry_ind]->hasKey(vect_name);
-        all_steps = esmry_loader[smry_ind]->all_steps_available();
+        //all_steps = esmry_loader[smry_ind]->all_steps_available();
     } else if (m_file_type[smry_ind] == FileType::ESMRY) {
         hasVect = ext_esmry_loader[smry_ind]->hasKey(vect_name);
-        all_steps = ext_esmry_loader[smry_ind]->all_steps_available();
+        //all_steps = ext_esmry_loader[smry_ind]->all_steps_available();
     }
+
+
 
     // well name in Flow and Eclipse (input data file) can be longer than 8 characters
     // In case this happens, these well names will be truncated to 8 characters before ending up
@@ -337,6 +345,7 @@ bool SmryAppl::add_new_series ( int chart_ind, int smry_ind, std::string vect_na
             hasVect = this->double_check_well_vector(vect_name, ext_esmry_loader[smry_ind]);
     }
 
+
     if (!hasVect){
         std::cout << "\n!Error loading vector '" << vect_name << "'";
         std::cout << " from summary file: " << m_smry_files[smry_ind].string() << "\n\n";
@@ -344,6 +353,9 @@ bool SmryAppl::add_new_series ( int chart_ind, int smry_ind, std::string vect_na
     }
 
     if ((vect_name == "TIMESTEP") && (all_steps) && (!hasVect)){
+
+        std::cout << "manual creation of TIMESTEP needs to be checked for efficiency \n";
+        exit(1);
 
         qInfo() << "Manually create a timestep vector";
 
@@ -376,6 +388,7 @@ bool SmryAppl::add_new_series ( int chart_ind, int smry_ind, std::string vect_na
             return false;
     }
 
+
     if ( vect_name.substr(0,4) == "WWIP" )
         smry_unit = "SM3/DAY";   // unit missing when smry file genrated by Eclipse
 
@@ -383,6 +396,7 @@ bool SmryAppl::add_new_series ( int chart_ind, int smry_ind, std::string vect_na
         int p1 = smry_unit.find_first_not_of ( " " );
         smry_unit = smry_unit.substr ( p1 );
     }
+
 
     std::chrono::system_clock::time_point startd; // = esmry_list[smry_ind]->startdate();
 
@@ -398,6 +412,7 @@ bool SmryAppl::add_new_series ( int chart_ind, int smry_ind, std::string vect_na
 
     int fractional_seconds = ms.count() % 1000;
 
+
     //std::tm *ltm = localtime(&t);
     std::tm *ltm = gmtime ( &t );
 
@@ -406,7 +421,27 @@ bool SmryAppl::add_new_series ( int chart_ind, int smry_ind, std::string vect_na
 
     // https://stackoverflow.com/questions/55370667/qt-qdatetime-from-string-with-timezone-and-daylight-saving
 
+    /*
+    // testing stuff
+
+    //QDate d1_test {1900 + 2022, 5, 24};
+    QDate d1_test {1900 + 2022, 12, 24};
+    QTime tm1_test { 12, 0, 0, 0 };
+
+    QDateTime dt_test1;
+
+    dt_test1.setDate ( d1_test );
+    dt_test1.setTime ( tm1_test );
+
+    const QDateTime dt_test2 = QDateTime(dt_test1.date(), dt_test1.time(), Qt::UTC);
+    std::cout <<  "\nshift: " << dt_test1.secsTo(dt_test2) / 3600 << " hrs\n\n";
+
+    exit(1);
+    */
     QDateTime dt_start_sim;
+
+    //dt_start_sim-
+    //Qt::OffsetFromUTC
 
     dt_start_sim.setDate ( d1 );
     dt_start_sim.setTime ( tm1 );
@@ -416,6 +451,8 @@ bool SmryAppl::add_new_series ( int chart_ind, int smry_ind, std::string vect_na
     SeriesEntry serie_data = std::make_tuple ( smry_ind, vect_name, ve, smry_unit );
 
     charts_list[chart_ind].push_back ( serie_data );
+
+    // ->  1.0e-4
 
 
     AxisMultiplierType mult_type;
@@ -434,6 +471,8 @@ bool SmryAppl::add_new_series ( int chart_ind, int smry_ind, std::string vect_na
         multiplier = 1e-3;
     } else
         mult_type = AxisMultiplierType::one;
+
+    // ->  1.6e-3
 
 
     if ( vaxis_ind > static_cast<int> ( axisY[chart_ind].size() + 1 ) )
@@ -519,6 +558,8 @@ bool SmryAppl::add_new_series ( int chart_ind, int smry_ind, std::string vect_na
         axisY[chart_ind][yaxsis_ind]->view_title();
     }
 
+    // ->  3.2e-3
+
     series[chart_ind].push_back ( new SmrySeries(chartList[chart_ind]) );
 
     std::string objName = root_name_list[smry_ind] + " " + vect_name;
@@ -555,6 +596,8 @@ bool SmryAppl::add_new_series ( int chart_ind, int smry_ind, std::string vect_na
     if ( n0 == timev.size() )
         n0 = 0;
 
+    // ->  3.2e-3
+
     std::string msg_str = "len timev = " + std::to_string(timev.size());
     msg_str = msg_str + " , len datav = " + std::to_string(datav.size());
     msg_str = msg_str + " , n0 = " + std::to_string(n0);
@@ -569,14 +612,20 @@ bool SmryAppl::add_new_series ( int chart_ind, int smry_ind, std::string vect_na
         d_msec = round(d_msec);
 
         QDateTime dtime = dt_start_sim;
+        dtime.setTimeSpec(Qt::UTC);      // improves runtime significantly
 
         dtime = dtime.addMSecs(static_cast<qint64>(d_msec));
 
         series[chart_ind].back()->append ( dtime.toMSecsSinceEpoch(), datav[n] * multiplier );
     }
 
+    // ->  4.0e-3
+
+
     series[chart_ind].back()->setPointsVisible ( false );
     series[chart_ind].back()->calcMinAndMax();
+
+    // ->  4.7e-3
 
     chartList[chart_ind]->addSeries ( series[chart_ind].back() );
 
@@ -599,11 +648,16 @@ bool SmryAppl::add_new_series ( int chart_ind, int smry_ind, std::string vect_na
         chartList[chart_ind]->addAxis ( axisX[chart_ind], Qt::AlignBottom );
     }
 
+    // ->  5.2e-3
+
+
     series[chart_ind].back()->attachAxis ( axisX[chart_ind] );
     qInfo() << " > xaxis attached to new series ";
 
     series[chart_ind].back()->attachAxis ( axisY[chart_ind][yaxsis_ind] );
     qInfo() << " > yaxis attached to new series ";
+
+    // ->  5.6e-3
 
     yaxis_map[series[chart_ind].back()] = axisY[chart_ind][yaxsis_ind];
 
@@ -618,6 +672,11 @@ bool SmryAppl::add_new_series ( int chart_ind, int smry_ind, std::string vect_na
     std::string lbl_str = std::to_string ( chart_ind + 1 ) + "/" + std::to_string ( chartList.size() );
     lbl_plot->setText ( QString::fromStdString ( lbl_str ) );
 
+    /*
+    auto end = std::chrono::system_clock::now();
+    std::chrono::duration<double> elapsed_seconds = end-start;
+    std::cout << "\n > runtime  add new series: " << elapsed_seconds.count() << " seconds\n" << std::endl;
+    */
     return true;
 }
 
