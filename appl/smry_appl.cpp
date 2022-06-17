@@ -870,7 +870,7 @@ bool SmryAppl::add_new_ens_series ( int chart_ind, std::string vect_name, int va
     double total_loading = after_loading - before_loading;
     std::ostringstream ss;
 
-    ss << "I/O  loading: " << std::fixed << std::setprecision(5) << total_loading << " sec";
+    ss << "I/O  loading: " << std::fixed << std::setprecision(5) << total_loading << " sec\n";
 
     qInfo() << "Finished loading from command line";
     qInfo() << QString::fromStdString(ss.str());

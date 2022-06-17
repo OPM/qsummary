@@ -567,7 +567,7 @@ SmryAppl::input_list_type  charts_separate_folders(const std::vector<std::filesy
 void print_input_charts(const SmryAppl::input_list_type& input_charts)
 {
 
-    std::cout << input_charts.size() << std::endl;
+    std::cout << "number of charts: " << input_charts.size() << std::endl;
 
     for ( size_t c = 0; c < input_charts.size(); c++ ) {
 
@@ -585,11 +585,92 @@ void print_input_charts(const SmryAppl::input_list_type& input_charts)
     }
 }
 
+template <typename T>
+bool double_check_well_vector(std::string& vect_name, std::unique_ptr<T>& smry)
+{
+    auto p = vect_name.find(":");
+    auto wname = vect_name.substr(p + 1);
+
+    if (wname.size() > 8)
+        wname = wname.substr(0,8);
+
+    std::string pattern = vect_name.substr(0, p + 1) + wname + "*";
+
+    auto vlist = smry->keywordList(pattern);
+
+    if (vlist.size() == 1){
+        vect_name = vlist[0];
+        return true;
+    } else {
+        return false;
+    }
+
+    return true;
+}
+
+
+
+void check_summary_vectors(SmryAppl::input_list_type& input_charts,
+                   const std::vector<FileType>& file_type,
+                   std::unordered_map<int, std::unique_ptr<Opm::EclIO::ESmry>>& esmry_loader,
+                   std::unordered_map<int, std::unique_ptr<Opm::EclIO::ExtESmry>>& lodsmry_loader)
+{
+
+    for ( size_t c = 0; c < input_charts.size(); c++ ) {
+
+        std::vector<SmryAppl::vect_input_type> vect_input;
+        vect_input = std::get<0>(input_charts[c]);
+
+        for ( size_t i = 0; i < vect_input.size(); i++ ) {
+            int n = std::get<0> ( vect_input[i] );
+            std::string vect_name = std::get<1> ( vect_input[i] );
+            int axis = std::get<2> ( vect_input[i] );
+
+            if (file_type[n] == FileType::SMSPEC){
+
+                if (!esmry_loader[n]->hasKey(vect_name)){
+                    if (vect_name.substr(0,1) == "W"){
+                        if (!double_check_well_vector(vect_name, esmry_loader[n]))
+                            throw std::invalid_argument("not able to load smry vector " + vect_name);
+                    } else {
+                        throw std::invalid_argument("not able to load smry vector " + vect_name);
+                    }
+
+                    vect_input[i] = std::make_tuple(n, vect_name, axis);
+                    auto xrange_str = std::get<1>(input_charts[c]);
+                    input_charts[c] = std::make_tuple(vect_input, xrange_str);
+
+
+                }
+            } else if (file_type[n] == FileType::ESMRY){
+
+                if (!lodsmry_loader[n]->hasKey(vect_name)){
+                    if (vect_name.substr(0,1) == "W"){
+                        if (!double_check_well_vector(vect_name, lodsmry_loader[n]))
+                            throw std::invalid_argument("not able to load smry vector " + vect_name);
+                    } else {
+                        throw std::invalid_argument("not able to load smry vector " + vect_name);
+                    }
+
+                    vect_input[i] = std::make_tuple(n, vect_name, axis);
+                    auto xrange_str = std::get<1>(input_charts[c]);
+                    input_charts[c] = std::make_tuple(vect_input, xrange_str);
+
+                }
+            } else {
+                throw std::invalid_argument("unknown file type");
+            }
+        }
+    }
+}
+
+
 void pre_load_smry(const std::vector<std::filesystem::path>& smry_files,
                    const SmryAppl::input_list_type& input_charts,
                    const std::vector<FileType>& file_type,
                    std::unordered_map<int, std::unique_ptr<Opm::EclIO::ESmry>>& esmry_loader,
-                   std::unordered_map<int, std::unique_ptr<Opm::EclIO::ExtESmry>>& lodsmry_loader)
+                   std::unordered_map<int, std::unique_ptr<Opm::EclIO::ExtESmry>>& lodsmry_loader,
+                   const size_t nthreads)
 {
     std::vector<std::vector<std::string>> smry_pre_load;
 
@@ -606,6 +687,11 @@ void pre_load_smry(const std::vector<std::filesystem::path>& smry_files,
         }
     }
 
+    omp_set_num_threads(nthreads);
+    
+    auto start_load = std::chrono::system_clock::now();
+
+    #pragma omp parallel for
     for (size_t n = 0; n < smry_files.size(); n++){
         if (smry_pre_load[n].size() > 0)
             if (file_type[n] == FileType::SMSPEC){
@@ -614,6 +700,12 @@ void pre_load_smry(const std::vector<std::filesystem::path>& smry_files,
                 lodsmry_loader[n]->loadData(smry_pre_load[n]);
             }
     }
+
+    auto end_load = std::chrono::system_clock::now();
+
+    std::chrono::duration<double> elapsed_seconds = end_load-start_load;
+
+    std::cout << ", loading: " <<  elapsed_seconds.count();
 }
 
 void remove_zero_vect(const std::vector<std::filesystem::path>& smry_files,
@@ -762,7 +854,6 @@ int main(int argc, char *argv[])
 
     std::cout << "\nNumber of threads: " << nthreads;
 
-
     omp_set_num_threads(nthreads);
 
     size_t num_files = arg_vect.size();
@@ -806,7 +897,7 @@ int main(int argc, char *argv[])
 
     std::chrono::duration<double> elapsed_seconds = end_open-start_open;
 
-    std::cout << " , elapsed opening " <<  elapsed_seconds.count() << std::endl;
+    std::cout << " , elapsed opening " <<  elapsed_seconds.count();
 
     if ((cmd_file.size() > 0) && (smry_vect.size() > 0)){
         throw std::invalid_argument("not possible to combine -v and -f option");
@@ -865,8 +956,7 @@ int main(int argc, char *argv[])
         update_input(input_charts, keyw_list, file_type, esmry_loader, lodsmry_loader, max_number_of_charts, xrange_str);
         
         //print_input_charts(input_charts);
-
-        pre_load_smry(smry_files, input_charts, file_type, esmry_loader, lodsmry_loader);
+        pre_load_smry(smry_files, input_charts, file_type, esmry_loader, lodsmry_loader, nthreads);
         
         if (ignore_zero)
             remove_zero_vect(smry_files, input_charts, file_type, esmry_loader, lodsmry_loader);
@@ -887,7 +977,7 @@ int main(int argc, char *argv[])
         }
 
         vect_list.push_back(smry_vect.substr(p1));
-
+        
         for (auto vect : vect_list){
 
             int p = vect.find_first_of("*");
@@ -906,12 +996,15 @@ int main(int argc, char *argv[])
             }
 
             update_input(input_charts, keyw_list, file_type, esmry_loader, lodsmry_loader, max_number_of_charts, xrange_str);
-            //print_input_charts(input_charts);
-            pre_load_smry(smry_files, input_charts, file_type, esmry_loader, lodsmry_loader);
 
-            if (ignore_zero)
-                remove_zero_vect(smry_files, input_charts, file_type, esmry_loader, lodsmry_loader);
+            //if (ignore_zero)
+            //    remove_zero_vect(smry_files, input_charts, file_type, esmry_loader, lodsmry_loader);
         }
+
+        pre_load_smry(smry_files, input_charts, file_type, esmry_loader, lodsmry_loader, nthreads);
+
+        if (ignore_zero)
+            remove_zero_vect(smry_files, input_charts, file_type, esmry_loader, lodsmry_loader);
 
         if (separate)
             input_charts = charts_separate_folders(smry_files, input_charts);
@@ -921,11 +1014,20 @@ int main(int argc, char *argv[])
 
         std::vector<std::string> cmd_lines = get_cmdlines(cmd_file);
         make_charts_from_cmd(input_charts, cmd_lines, num_files, xrange_str);
+
+        //std::cout << "before \n";
         //print_input_charts(input_charts);
-        pre_load_smry(smry_files, input_charts, file_type, esmry_loader, lodsmry_loader);
+
+        check_summary_vectors(input_charts, file_type, esmry_loader, lodsmry_loader);
+
+        //std::cout << "after \n";
+        //print_input_charts(input_charts);
+        //exit(1);
+        pre_load_smry(smry_files, input_charts, file_type, esmry_loader, lodsmry_loader, nthreads);
     }
-
-
+    
+    std::cout << std::endl;
+    
     loaders = std::make_tuple(smry_files, file_type, std::move(esmry_loader), std::move(lodsmry_loader));
 
     SmryAppl window(arg_vect, loaders, input_charts);
