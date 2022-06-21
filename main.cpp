@@ -455,6 +455,15 @@ void make_charts_from_cmd(SmryAppl::input_list_type& input_charts, std::vector<s
     }
 }
 
+void remove_trailing_char(std::string& line, const std::string& charlist)
+{
+    size_t n = line.size();
+
+    while ((n > 0) && (charlist.find(line.substr(n-1, 1)) != std::string::npos))
+       n--;
+
+    line = line.substr(0,n);
+}
 
 std::vector<std::string> get_cmdlines(const std::string& filename)
 {
@@ -481,6 +490,8 @@ std::vector<std::string> get_cmdlines(const std::string& filename)
         int p1 = fileStr.find_first_of("\n", p0);
 
         std::string tmp = fileStr.substr(p0, p1-p0);
+
+        remove_trailing_char(tmp," \t");
 
         if ((tmp.substr(0,2) != "--") and (tmp.size() > 0) and (tmp.substr(0,1) != "#"))
             cmd_lines.push_back(tmp);
@@ -688,7 +699,7 @@ void pre_load_smry(const std::vector<std::filesystem::path>& smry_files,
     }
 
     omp_set_num_threads(nthreads);
-    
+
     auto start_load = std::chrono::system_clock::now();
 
     #pragma omp parallel for
@@ -714,38 +725,38 @@ void remove_zero_vect(const std::vector<std::filesystem::path>& smry_files,
                    std::unordered_map<int, std::unique_ptr<Opm::EclIO::ESmry>>& esmry_loader,
                    std::unordered_map<int, std::unique_ptr<Opm::EclIO::ExtESmry>>& lodsmry_loader)
 {
-    
+
     int c = static_cast<int>(input_charts.size()) -1;
 
     while (c > -1){
-        
+
         auto vect_input = std::get<0>(input_charts[c]);
         auto xrange_str = std::get<1>(input_charts[c]);
-        
+
         int n = static_cast<int>(vect_input.size()) -1 ;
 
         while (n > -1){
             auto smry_ind = std::get<0>(vect_input[n]);
             auto vect_name = std::get<1>(vect_input[n]);
-            
+
             bool nonzero;
-            
+
             if (file_type[n] == FileType::SMSPEC)
                 nonzero = has_nonzero(esmry_loader[n], vect_name);
             else if (file_type[n] == FileType::ESMRY)
                 nonzero = has_nonzero(lodsmry_loader[n], vect_name);
-            
+
             if (!nonzero)
-                vect_input.erase( vect_input.begin() + n ); 
-            
+                vect_input.erase( vect_input.begin() + n );
+
             n--;
-        } 
-        
+        }
+
         if (vect_input.size() > 0)
-            input_charts[c] = std::make_tuple(vect_input, xrange_str);    
+            input_charts[c] = std::make_tuple(vect_input, xrange_str);
         else
-            input_charts.erase( input_charts.begin() + c ); 
-         
+            input_charts.erase( input_charts.begin() + c );
+
         c --;
     }
 }
@@ -954,10 +965,10 @@ int main(int argc, char *argv[])
             keyw_list = lodsmry_loader[0]->keywordList();
 
         update_input(input_charts, keyw_list, file_type, esmry_loader, lodsmry_loader, max_number_of_charts, xrange_str);
-        
+
         //print_input_charts(input_charts);
         pre_load_smry(smry_files, input_charts, file_type, esmry_loader, lodsmry_loader, nthreads);
-        
+
         if (ignore_zero)
             remove_zero_vect(smry_files, input_charts, file_type, esmry_loader, lodsmry_loader);
 
@@ -977,7 +988,7 @@ int main(int argc, char *argv[])
         }
 
         vect_list.push_back(smry_vect.substr(p1));
-        
+
         for (auto vect : vect_list){
 
             int p = vect.find_first_of("*");
@@ -1025,9 +1036,9 @@ int main(int argc, char *argv[])
         //exit(1);
         pre_load_smry(smry_files, input_charts, file_type, esmry_loader, lodsmry_loader, nthreads);
     }
-    
+
     std::cout << std::endl;
-    
+
     loaders = std::make_tuple(smry_files, file_type, std::move(esmry_loader), std::move(lodsmry_loader));
 
     SmryAppl window(arg_vect, loaders, input_charts);
