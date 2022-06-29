@@ -1336,6 +1336,8 @@ void SmryAppl::update_chart_title_and_legend ( int chart_ind )
 
     if ( smry_ind_set.size() == 1 ) {
 
+        smry_ind = *(smry_ind_set.begin());
+
         switch( m_file_type[smry_ind] ) {
             case FileType::SMSPEC: title = esmry_loader[smry_ind]->rootname();
             break;
