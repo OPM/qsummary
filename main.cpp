@@ -260,6 +260,37 @@ std::string make_new_line(const std::vector<std::string>& tokens, int smry_ind)
 }
 
 
+std::vector<std::string> process_range(std::string& line, bool replace_on_line)
+{
+    auto start = line.find ( "RANGE(" );
+    auto end = line.find ( ")", start );
+
+    std::string range_str = line.substr ( start, start - end );
+
+    auto p1 = range_str.find("(");
+    auto p2 = range_str.find(",");
+    auto p3 = range_str.find(")");
+
+    int from = std::stoi(range_str.substr(p1+1, p2-p1-1));
+    int to = std::stoi(range_str.substr(p2+1, p3-p2-1));
+
+    std::vector<std::string> str_list;
+
+    for (int n = from; n < (to + 1); n++)
+        str_list.push_back(std::to_string(n));
+
+    if (replace_on_line){
+        std::string rep_str;
+
+        for (auto& element: str_list)
+            rep_str = rep_str + " " +  element;
+
+        line.replace(start, end, rep_str);
+    }
+
+    return str_list;
+}
+
 std::vector<std::string> process_cmdlines(std::vector<std::string> cmd_lines, int num_smry_files)
 {
    // process LIST and FOR keywords
@@ -303,6 +334,13 @@ std::vector<std::string> process_cmdlines(std::vector<std::string> cmd_lines, in
                     list_ind = list_names.size() -1;
                 }
 
+
+                if (tokens[3].substr(0,6) == "RANGE("){
+
+                    auto range_list = process_range(cmd_lines[lnr], true);
+                    tokens = split(cmd_lines[lnr], ", \t");
+                }
+
                 for (size_t n = 3; n < tokens.size(); n++)
                     list_vect[list_ind].push_back(tokens[n]);
 
@@ -324,8 +362,31 @@ std::vector<std::string> process_cmdlines(std::vector<std::string> cmd_lines, in
             std::string var_name = tokens[1];
             std::string list_str = tokens[3];
 
-            if (list_str[0] == '$') {
-                list_str = list_str.substr(1);
+            if (list_str.substr(0,6) == "RANGE(") {
+
+                // make new list and add this to list_vect
+                // list names = DUMMY_LIST_X, when x is the first available integer
+
+                auto range_list = process_range(cmd_lines[lnr], false);
+
+                int tmp_num = 0;
+                std::string tmp_list_name = "DUMMY_LIST_" + std::to_string(tmp_num);
+
+                while (std::find(list_names.begin(), list_names.end(), tmp_list_name) != list_names.end()) {
+                    tmp_num ++;
+                    tmp_list_name = "DUMMY_LIST_" + std::to_string(tmp_num);
+                }
+
+                list_names.push_back(tmp_list_name);
+                list_vect.push_back(range_list);
+
+                list_str = tmp_list_name;
+
+            } else {
+
+                if (list_str[0] == '$') {
+                    list_str = list_str.substr(1);
+                }
             }
 
             int list_ind = -1;
@@ -465,6 +526,20 @@ void remove_trailing_char(std::string& line, const std::string& charlist)
     line = line.substr(0,n);
 }
 
+bool update_variables(std::vector<std::string>& cmd_lines, int num_cases)
+{
+    for (size_t n = 0; n < cmd_lines.size(); n++){
+        auto pos = cmd_lines[n].find("$NUM_CASES");
+
+        while (pos != std::string::npos){
+            cmd_lines[n].replace(pos,10, std::to_string(num_cases));
+            pos = cmd_lines[n].find("$NUM_CASES");
+        }
+    }
+
+    return true;
+}
+
 std::vector<std::string> get_cmdlines(const std::string& filename)
 {
     std::filesystem::path fs_cmdf(filename);
@@ -591,7 +666,7 @@ void print_input_charts(const SmryAppl::input_list_type& input_charts)
             int n = std::get<0> ( vect_input[i] );
             std::string vect_name = std::get<1> ( vect_input[i] );
 
-            std::cout << " > vect_name: " << vect_name << std::endl;
+            std::cout << "smry_ind= " << n << " > vect_name: " << vect_name << std::endl;
         }
     }
 }
@@ -1024,16 +1099,14 @@ int main(int argc, char *argv[])
     } else if (cmd_file.size() > 0) {
 
         std::vector<std::string> cmd_lines = get_cmdlines(cmd_file);
-        make_charts_from_cmd(input_charts, cmd_lines, num_files, xrange_str);
 
-        //std::cout << "before \n";
-        //print_input_charts(input_charts);
+        if (!update_variables(cmd_lines, num_files))
+            throw std::invalid_argument("command files not correct");
+
+        make_charts_from_cmd(input_charts, cmd_lines, num_files, xrange_str);
 
         check_summary_vectors(input_charts, file_type, esmry_loader, lodsmry_loader);
 
-        //std::cout << "after \n";
-        //print_input_charts(input_charts);
-        //exit(1);
         pre_load_smry(smry_files, input_charts, file_type, esmry_loader, lodsmry_loader, nthreads);
     }
 
