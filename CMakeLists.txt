@@ -24,6 +24,7 @@ add_library(smry_appl
    appl/smry_series.cpp
    appl/chartview.cpp
    appl/point_info.cpp
+   appl/qsum_cmdf.cpp
   )
 
 add_executable(qsummary main.cpp)
