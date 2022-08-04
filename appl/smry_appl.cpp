@@ -28,9 +28,14 @@
 
 
 SmryAppl::SmryAppl(std::vector<std::string> arg_vect, loader_list_type& loaders,
-                   input_list_type chart_input, QWidget *parent)
+                   input_list_type chart_input, std::unique_ptr<DerivedSmry>& derived_smry, QWidget *parent)
     : QGraphicsView(new QGraphicsScene, parent)
 {
+
+    if (derived_smry != nullptr)
+        m_derived_smry = std::move(derived_smry);
+
+
     this->initColorAndStyle();
 
     auto fileList = std::get<0>(loaders);
@@ -235,8 +240,9 @@ void SmryAppl::create_charts_from_input ( const input_list_type& chart_input )
                 int n = std::get<0> ( vect_input[i] );
                 std::string vect_name = std::get<1> ( vect_input[i] );
                 int axis_ind = std::get<2> ( vect_input[i] );
+                bool is_derived = std::get<3> ( vect_input[i] );
 
-                if (this->add_new_series ( chart_ind, n, vect_name, axis_ind) == false) {
+                if (this->add_new_series ( chart_ind, n, vect_name, axis_ind, is_derived) == false) {
                     std::cout << "!warning, not able to add series '" << vect_name <<"' for case ";
                     std::cout << root_name_list[n]  << "\n";
                 }
@@ -267,6 +273,7 @@ void SmryAppl::create_charts_from_input ( const input_list_type& chart_input )
     this->update_chart_labels();
 }
 
+
 template <typename T>
 bool SmryAppl::double_check_well_vector(std::string& vect_name, std::unique_ptr<T>& smry)
 {
@@ -290,17 +297,17 @@ bool SmryAppl::double_check_well_vector(std::string& vect_name, std::unique_ptr<
     return true;
 }
 
-bool SmryAppl::add_new_series ( int chart_ind, int smry_ind, std::string vect_name, int vaxis_ind )
+bool SmryAppl::add_new_series ( int chart_ind, int smry_ind, std::string vect_name, int vaxis_ind, bool is_derived)
 {
     QString message("Add new series");
-    message = message + " " + QString::fromStdString(root_name_list[smry_ind]);
+    if (smry_ind < 0)
+        message = message + " Derived summary, global ";
+    else
+        message = message + " " + QString::fromStdString(root_name_list[smry_ind]);
+
     message = message + " " + QString::fromStdString(vect_name);
 
     qInfo() << message;
-
-
-    //std::cout << "starting adding new series: " << vect_name << " vs TIME \n";
-    //auto start = std::chrono::system_clock::now();
 
     std::vector<float> datav;
 
@@ -308,34 +315,36 @@ bool SmryAppl::add_new_series ( int chart_ind, int smry_ind, std::string vect_na
 
     auto start_get = std::chrono::system_clock::now();
 
-    if (m_file_type[smry_ind] == FileType::SMSPEC)
+    if ((is_derived) && (smry_ind < 0)){
+        timev = m_derived_smry->get(smry_ind, "TIME" );
+    } else if (m_file_type[smry_ind] == FileType::SMSPEC)
         timev = esmry_loader[smry_ind]->get("TIME");
     else if (m_file_type[smry_ind] == FileType::ESMRY)
         timev = ext_esmry_loader[smry_ind]->get("TIME");
-
 
     std::string smry_unit;
 
     bool hasVect;
     bool all_steps;
 
-    // tskille: note-1 disable all_steps_avaliable
+    if (is_derived){
+        hasVect = m_derived_smry->is_derived(smry_ind, vect_name);
 
-    if (m_file_type[smry_ind] == FileType::SMSPEC){
+        if (!hasVect)
+            throw std::runtime_error("derived smry vector " + std::to_string(smry_ind) + ":" + vect_name + " not found in m_derived_smry");
+
+    } else if (m_file_type[smry_ind] == FileType::SMSPEC){
         hasVect = esmry_loader[smry_ind]->hasKey(vect_name);
-        //all_steps = esmry_loader[smry_ind]->all_steps_available();
     } else if (m_file_type[smry_ind] == FileType::ESMRY) {
         hasVect = ext_esmry_loader[smry_ind]->hasKey(vect_name);
-        //all_steps = ext_esmry_loader[smry_ind]->all_steps_available();
     }
-
-
 
     // well name in Flow and Eclipse (input data file) can be longer than 8 characters
     // In case this happens, these well names will be truncated to 8 characters before ending up
     // in smspec files. For ESMRY the following may be the case.
     //  a) ESMRY files produced by simulator Flow will contain all characters
     //  b) ESMRY files post simulation converted from SMSPEC/UNSMRY -> ESMRY will har truncated well names
+
 
     if ((!hasVect) && (vect_name.substr(0,1) == "W")){
 
@@ -354,9 +363,6 @@ bool SmryAppl::add_new_series ( int chart_ind, int smry_ind, std::string vect_na
 
     if ((vect_name == "TIMESTEP") && (all_steps) && (!hasVect)){
 
-        std::cout << "manual creation of TIMESTEP needs to be checked for efficiency \n";
-        exit(1);
-
         qInfo() << "Manually create a timestep vector";
 
         datav.reserve(timev.size());
@@ -370,10 +376,13 @@ bool SmryAppl::add_new_series ( int chart_ind, int smry_ind, std::string vect_na
 
     } else {
 
-        //bool hasVect;
         auto start_get = std::chrono::system_clock::now();
 
-        if (m_file_type[smry_ind] == FileType::SMSPEC){
+        if (is_derived){
+            datav = m_derived_smry->get(smry_ind, vect_name );
+            smry_unit = m_derived_smry->get_unit ( smry_ind, vect_name );
+
+        } else if (m_file_type[smry_ind] == FileType::SMSPEC){
             hasVect = esmry_loader[smry_ind]->hasKey(vect_name);
             datav = esmry_loader[smry_ind]->get ( vect_name );
             smry_unit = esmry_loader[smry_ind]->get_unit ( vect_name );
@@ -400,7 +409,9 @@ bool SmryAppl::add_new_series ( int chart_ind, int smry_ind, std::string vect_na
 
     std::chrono::system_clock::time_point startd; // = esmry_list[smry_ind]->startdate();
 
-    if (m_file_type[smry_ind] == FileType::SMSPEC)
+    if (smry_ind < 0){
+        startd = m_derived_smry->startdate();
+    } else if (m_file_type[smry_ind] == FileType::SMSPEC)
         startd = esmry_loader[smry_ind]->startdate();
     else if (m_file_type[smry_ind] == FileType::ESMRY)
         startd = ext_esmry_loader[smry_ind]->startdate();
@@ -411,7 +422,6 @@ bool SmryAppl::add_new_series ( int chart_ind, int smry_ind, std::string vect_na
     std::time_t t = s.count();
 
     int fractional_seconds = ms.count() % 1000;
-
 
     //std::tm *ltm = localtime(&t);
     std::tm *ltm = gmtime ( &t );
@@ -562,13 +572,20 @@ bool SmryAppl::add_new_series ( int chart_ind, int smry_ind, std::string vect_na
 
     series[chart_ind].push_back ( new SmrySeries(chartList[chart_ind]) );
 
-    std::string objName = root_name_list[smry_ind] + " " + vect_name;
+    std::string objName;
+
+    if (smry_ind < 0)
+        objName = "Derived Smry " + vect_name;
+    else
+        objName = root_name_list[smry_ind] + " " + vect_name;
+
     series[chart_ind].back()->setObjectName ( QString::fromStdString ( objName ) );
 
     size_t n0 = 0;
     size_t n1 = datav.size() - 1;
 
     bool use_minimum_range = false;
+
 
     if ( ( vect_name.substr ( 0,1 ) == "W" ) && ( use_minimum_range ) ) {
 
@@ -608,19 +625,20 @@ bool SmryAppl::add_new_series ( int chart_ind, int smry_ind, std::string vect_na
 
     for ( size_t n = n0; n <  n1 + 1; n++ ) {
 
-        double d_msec = static_cast<double>(timev[n])* 24.0 * 3600.0 * 1000.0;
-        d_msec = round(d_msec);
+        if (!isnan(datav[n])) {
+            double d_msec = static_cast<double>(timev[n])* 24.0 * 3600.0 * 1000.0;
+            d_msec = round(d_msec);
 
-        QDateTime dtime = dt_start_sim;
-        dtime.setTimeSpec(Qt::UTC);      // improves runtime significantly
+            QDateTime dtime = dt_start_sim;
+            dtime.setTimeSpec(Qt::UTC);      // improves runtime significantly
 
-        dtime = dtime.addMSecs(static_cast<qint64>(d_msec));
+            dtime = dtime.addMSecs(static_cast<qint64>(d_msec));
 
-        series[chart_ind].back()->append ( dtime.toMSecsSinceEpoch(), datav[n] * multiplier );
+            series[chart_ind].back()->append ( dtime.toMSecsSinceEpoch(), datav[n] * multiplier );
+        }
     }
 
     // ->  4.0e-3
-
 
     series[chart_ind].back()->setPointsVisible ( false );
     series[chart_ind].back()->calcMinAndMax();
@@ -672,11 +690,6 @@ bool SmryAppl::add_new_series ( int chart_ind, int smry_ind, std::string vect_na
     std::string lbl_str = std::to_string ( chart_ind + 1 ) + "/" + std::to_string ( chartList.size() );
     lbl_plot->setText ( QString::fromStdString ( lbl_str ) );
 
-    /*
-    auto end = std::chrono::system_clock::now();
-    std::chrono::duration<double> elapsed_seconds = end-start;
-    std::cout << "\n > runtime  add new series: " << elapsed_seconds.count() << " seconds\n" << std::endl;
-    */
     return true;
 }
 
@@ -994,7 +1007,7 @@ void SmryAppl::update_axis_range(SmryYaxis* axis){
     // over all min and max values and call
     // -> bool axis->set_range(float min_val, float max_val);
 
-    
+
     double min_y = +1.0*std::numeric_limits<double>::max();
     double max_y = -1.0*std::numeric_limits<double>::max();
 
@@ -1012,15 +1025,15 @@ void SmryAppl::update_axis_range(SmryYaxis* axis){
     }
 
     if (min_y == max_y){
-        
+
         if (min_y > 0.0)
             min_y = 0.0;
         else
-            max_y = 0.1;    
+            max_y = 0.1;
 
         adjust_yaxis_props(axis, min_y, max_y);
     }
-    
+
     if (!axis->set_range(min_y, max_y)){
 
         if (min_y != max_y) {
@@ -1334,16 +1347,17 @@ void SmryAppl::update_chart_title_and_legend ( int chart_ind )
 
     std::string title = "";
 
+
     if ( smry_ind_set.size() == 1 ) {
 
-        smry_ind = *(smry_ind_set.begin());
+        int smry_index = *(smry_ind_set.begin());
 
-        switch( m_file_type[smry_ind] ) {
-            case FileType::SMSPEC: title = esmry_loader[smry_ind]->rootname();
-            break;
-            case FileType::ESMRY: title = ext_esmry_loader[smry_ind]->rootname();
-            break;
-        }
+        if (smry_index < 0)
+            title = "Derives Smry";
+        else if (m_file_type[smry_index] == FileType::SMSPEC)
+            title = esmry_loader[smry_index]->rootname();
+        else if (m_file_type[smry_index] == FileType::ESMRY)
+            title = ext_esmry_loader[smry_index]->rootname();
 
         legende_rootn = false;
     }
@@ -1382,15 +1396,13 @@ void SmryAppl::update_chart_title_and_legend ( int chart_ind )
         SmryAppl::vectorEntry ve = std::get<2> ( series_props[n] );
 
         if ( legende_rootn ) {
+            if (smry_ind < 0)
+               legende_string = "Derived";
+            else if (m_file_type[smry_ind] == FileType::SMSPEC)
+               legende_string = esmry_loader[smry_ind]->rootname();
+            else if (m_file_type[smry_ind] == FileType::ESMRY)
+               legende_string = ext_esmry_loader[smry_ind]->rootname();
 
-            switch( m_file_type[smry_ind] ) {
-            case FileType::SMSPEC:
-                legende_string = esmry_loader[smry_ind]->rootname();
-                break;
-            case FileType::ESMRY:
-                legende_string = ext_esmry_loader[smry_ind]->rootname();
-                break;
-            }
         }
 
         if ( legende_name )
@@ -2258,7 +2270,7 @@ void SmryAppl::keyPressEvent ( QKeyEvent *event )
 
             } else if ( ( cmd_var == ":e" ) || ( cmd_var == ":E" ) ) {
 
-                QApplication::quit(); 
+                QApplication::quit();
 
             } else {
 

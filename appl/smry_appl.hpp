@@ -23,6 +23,8 @@
 #include <opm/io/eclipse/ESmry.hpp>
 #include <opm/io/eclipse/ExtESmry.hpp>
 
+#include <appl/derived_smry.hpp>
+
 #include <filesystem>
 
 #include <appl/smry_series.hpp>
@@ -37,6 +39,9 @@
 
 #include <set>
 
+#include <appl/derived_smry.hpp>
+
+class DerivedSmry;
 
 enum class FileType{ SMSPEC, ESMRY };
 
@@ -46,8 +51,9 @@ class SmryAppl: public QGraphicsView
     Q_OBJECT
 
 public:
-    // smry_ind, name, axis_ind
-    using vect_input_type = std::tuple<int, std::string, int>;
+    // smry_ind, name, axis_ind, derived
+    using vect_input_type = std::tuple<int, std::string, int, bool>;
+
     using char_input_type = std::tuple<std::vector<vect_input_type>, std::string>;
 
     using input_list_type = std::vector<char_input_type>;
@@ -59,9 +65,9 @@ public:
                            std::unordered_map<int, std::unique_ptr<Opm::EclIO::ExtESmry>>
                          >;
 
-
+// std::unique_ptr<DerivedSmry> derived_smry = nullptr ,
     SmryAppl(std::vector<std::string> arg_vect, loader_list_type& loaders,
-             input_list_type chart_input, QWidget *parent = 0);
+             input_list_type chart_input, std::unique_ptr<DerivedSmry>& derived_smry, QWidget *parent = 0);
 
     void export_figure(const std::string& fname, int chart_ind);
 
@@ -83,6 +89,8 @@ private:
 
     std::unordered_map<int, std::unique_ptr<Opm::EclIO::ESmry>> esmry_loader;
     std::unordered_map<int, std::unique_ptr<Opm::EclIO::ExtESmry>> ext_esmry_loader;
+
+    std::unique_ptr<DerivedSmry> m_derived_smry;
 
     std::vector<QColor> color_tab;
     std::vector<Qt::PenStyle> style_tab;
@@ -152,7 +160,7 @@ private:
     void initColorAndStyle();
     void create_charts_from_input ( const input_list_type& chart_input );
     void init_new_chart();
-    bool add_new_series ( int chart_ind, int smry_ind, std::string vect_name, int vaxis_ind = -1);
+    bool add_new_series ( int chart_ind, int smry_ind, std::string vect_name, int vaxis_ind = -1, bool is_derived = false);
     bool add_new_ens_series ( int chart_ind, std::string vect_name, int vaxis_ind = -1);
 
     void update_chart_labels();
