@@ -34,6 +34,7 @@
 #include <boost/algorithm/string.hpp>
 
 #include <appl/qsum_cmdf.hpp>
+#include <appl/derived_smry.hpp>
 
 #include <unistd.h>
 #include <sys/types.h>
@@ -186,7 +187,7 @@ void update_input(SmryAppl::input_list_type& input_charts,
                 hasVect = lodsmry_loader[n]->hasKey(v);
 
             if (hasVect)
-                vect_list.push_back(std::make_tuple (n, v, -1));
+                vect_list.push_back(std::make_tuple (n, v, -1, false));
         }
 
         if (vect_list.size() > 0){
@@ -285,8 +286,8 @@ SmryAppl::input_list_type  charts_separate_folders(const std::vector<std::filesy
         std::vector<SmryAppl::vect_input_type> vect_input_list;
 
         for (size_t n = 0; n < smry_ind_vect[c].size(); n++){
-            std::tuple<int, std::string, int> vect;
-            vect = std::make_tuple(smry_ind_vect[c][n], key_vect[c][n], -1);
+            std::tuple<int, std::string, int, bool> vect;
+            vect = std::make_tuple(smry_ind_vect[c][n], key_vect[c][n], -1, false);
             vect_input_list.push_back(vect);
         }
 
@@ -314,8 +315,10 @@ void print_input_charts(const SmryAppl::input_list_type& input_charts)
         for ( size_t i=0; i < vect_input.size(); i++ ) {
             int n = std::get<0> ( vect_input[i] );
             std::string vect_name = std::get<1> ( vect_input[i] );
+            bool is_derived = std::get<3> ( vect_input[i] );
 
-            std::cout << "smry_ind= " << n << " > vect_name: " << vect_name << std::endl;
+            std::cout << "smry_ind= " << n << " > vect_name: " << vect_name << "  ";
+            std::cout << std::boolalpha << is_derived << std::endl;
         }
     }
 }
@@ -360,40 +363,43 @@ void check_summary_vectors(SmryAppl::input_list_type& input_charts,
             int n = std::get<0> ( vect_input[i] );
             std::string vect_name = std::get<1> ( vect_input[i] );
             int axis = std::get<2> ( vect_input[i] );
+            bool is_derived = std::get<3> ( vect_input[i] );
 
-            if (file_type[n] == FileType::SMSPEC){
+            if (!is_derived) {
 
-                if (!esmry_loader[n]->hasKey(vect_name)){
-                    if (vect_name.substr(0,1) == "W"){
-                        if (!double_check_well_vector(vect_name, esmry_loader[n]))
+                if (file_type[n] == FileType::SMSPEC) {
+
+                    if (!esmry_loader[n]->hasKey(vect_name)) {
+                        if (vect_name.substr(0,1) == "W") {
+                            if (!double_check_well_vector(vect_name, esmry_loader[n]))
+                                throw std::invalid_argument("not able to load smry vector " + vect_name);
+                        } else {
                             throw std::invalid_argument("not able to load smry vector " + vect_name);
-                    } else {
-                        throw std::invalid_argument("not able to load smry vector " + vect_name);
+                        }
+
+                        vect_input[i] = std::make_tuple(n, vect_name, axis, false);
+                        auto xrange_str = std::get<1>(input_charts[c]);
+                        input_charts[c] = std::make_tuple(vect_input, xrange_str);
                     }
 
-                    vect_input[i] = std::make_tuple(n, vect_name, axis);
-                    auto xrange_str = std::get<1>(input_charts[c]);
-                    input_charts[c] = std::make_tuple(vect_input, xrange_str);
+                } else if (file_type[n] == FileType::ESMRY) {
 
-
-                }
-            } else if (file_type[n] == FileType::ESMRY){
-
-                if (!lodsmry_loader[n]->hasKey(vect_name)){
-                    if (vect_name.substr(0,1) == "W"){
-                        if (!double_check_well_vector(vect_name, lodsmry_loader[n]))
+                    if (!lodsmry_loader[n]->hasKey(vect_name)) {
+                        if (vect_name.substr(0,1) == "W") {
+                            if (!double_check_well_vector(vect_name, lodsmry_loader[n]))
+                                throw std::invalid_argument("not able to load smry vector " + vect_name);
+                        } else {
                             throw std::invalid_argument("not able to load smry vector " + vect_name);
-                    } else {
-                        throw std::invalid_argument("not able to load smry vector " + vect_name);
+                        }
+
+                        vect_input[i] = std::make_tuple(n, vect_name, axis, false);
+                        auto xrange_str = std::get<1>(input_charts[c]);
+                        input_charts[c] = std::make_tuple(vect_input, xrange_str);
+
                     }
-
-                    vect_input[i] = std::make_tuple(n, vect_name, axis);
-                    auto xrange_str = std::get<1>(input_charts[c]);
-                    input_charts[c] = std::make_tuple(vect_input, xrange_str);
-
+                } else {
+                    throw std::invalid_argument("unknown file type");
                 }
-            } else {
-                throw std::invalid_argument("unknown file type");
             }
         }
     }
@@ -418,7 +424,10 @@ void pre_load_smry(const std::vector<std::filesystem::path>& smry_files,
         for (size_t s = 0; s < vect_input.size(); s++) {
             auto smry_ind = std::get<0>(vect_input[s]);
             auto vect_name = std::get<1>(vect_input[s]);
-            smry_pre_load[smry_ind].push_back(vect_name);
+            auto is_derived = std::get<3>(vect_input[s]);
+
+            if (!is_derived)
+                smry_pre_load[smry_ind].push_back(vect_name);
         }
     }
 
@@ -587,6 +596,11 @@ int main(int argc, char *argv[])
     if (nthreads > arg_vect.size())
         nthreads = arg_vect.size();
 
+    if (nthreads == 0){
+        std::cout << "\n! Error, at least one summary file needs to be specified on command line \n\n";
+        exit(1);
+    }
+
     std::cout << "\nNumber of threads: " << nthreads;
 
     omp_set_num_threads(nthreads);
@@ -677,6 +691,8 @@ int main(int argc, char *argv[])
     SmryAppl::input_list_type input_charts;
     SmryAppl::loader_list_type loaders;
 
+    std::unique_ptr<DerivedSmry> derived_smry;
+
     if (plot_all){
 
         if (smry_vect.size() > 0)
@@ -751,21 +767,26 @@ int main(int argc, char *argv[])
 
         cmdfile.make_charts_from_cmd(input_charts, xrange_str);
 
-        //cmdfile.print_cmd_lines();
-        //cmdfile.print_processd_cmd_lines();
         //print_input_charts(input_charts);
 
         check_summary_vectors(input_charts, file_type, esmry_loader, lodsmry_loader);
 
         pre_load_smry(smry_files, input_charts, file_type, esmry_loader, lodsmry_loader, nthreads);
 
+        if (cmdfile.count_define() > 0){
+            std::tuple<double,double> io_elapsed;
+
+            derived_smry = std::make_unique<DerivedSmry>(cmdfile, file_type, esmry_loader, lodsmry_loader);
+
+        }
     }
 
     std::cout << std::endl;
 
     loaders = std::make_tuple(smry_files, file_type, std::move(esmry_loader), std::move(lodsmry_loader));
 
-    SmryAppl window(arg_vect, loaders, input_charts);
+
+    SmryAppl window(arg_vect, loaders, input_charts, derived_smry);
 
     window.resize(1400, 700);
 

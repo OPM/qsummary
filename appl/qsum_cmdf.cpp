@@ -28,9 +28,93 @@ QsumCMDF::QsumCMDF(const std::string& cmd_file, int num_smry_files)
 
 {
     m_num_smry_files = num_smry_files;
+
+    // reading command file, no processing stored in variable m_cmd_lines
     get_cmdlines(cmd_file);
+
+    // variable $NUM_CASES is processed if used, stored in variable m_cmd_lines
+    //  > in future add variable $CMDL_LIST which is a list submitted on the command line
     update_variables();
+
+    // processing cmd_lines storing this in m_processed_cmd_lines
+    // for loops and lists are processed
+    m_processed_cmd_lines = process_cmdlines();
+
+    update_rhs_cmd_lines_define();
+
+    make_define_vect();
 }
+
+
+void QsumCMDF::print_m_defined()
+{
+    std::cout << "\n\nQsumCMDF::print_m_defined: \n\n";
+
+    for (size_t n=0; n < m_define_vect.size(); n++){
+        auto def =  m_define_vect[n];
+
+        std::cout << n << " " << std::get<0>(def);
+        std::cout << " " << std::get<1>(def);
+        std::cout << " " << std::get<2>(def);
+
+        std::cout << "\n";
+    }
+}
+
+
+int QsumCMDF::derived_key_index(const std::string& name)
+{
+
+    for (size_t n = 0; n < m_define_vect.size(); n++){
+        auto def =  m_define_vect[n];
+        std::string def_name = std::get<0>(def);
+
+        if (def_name == name )
+            return n;
+    }
+
+    return -1;
+}
+
+
+bool QsumCMDF::is_number(const std::string& numstr)
+{
+    for (char const &c : numstr)
+        if (std::isdigit(c) == 0)
+            return false;
+
+    return true;
+}
+
+
+void QsumCMDF::make_define_vect()
+{
+    for (size_t n = 0; n < m_processed_cmd_lines.size(); n++){
+
+        auto tokens = split(m_processed_cmd_lines[n], " \t");
+        if (tokens[0] == "DEFINE"){
+
+            auto name = tokens[1];
+            auto unit = tokens[2];
+            std::string expr;
+
+            for (size_t n = 4; n < tokens.size(); n++)
+                expr = expr + tokens[n] + " ";
+
+            expr.pop_back();
+
+            std::tuple<std::string, std::string, std::string> def = std::make_tuple(name, expr, unit);
+
+            int key_index = derived_key_index(name);
+
+            if (key_index > -1)
+                m_define_vect.erase(m_define_vect.begin() + key_index);
+
+            m_define_vect.push_back(def);
+        }
+    }
+}
+
 
 void QsumCMDF::get_cmdlines(const std::string& filename)
 {
@@ -46,8 +130,6 @@ void QsumCMDF::get_cmdlines(const std::string& filename)
     std::string fileStr = std::string(buffer, file_size);
 
     delete[] buffer;
-
-    //std::vector<std::string> cmd_lines;
 
     bool end_of_file = false;
 
@@ -69,6 +151,7 @@ void QsumCMDF::get_cmdlines(const std::string& filename)
         p0 = p1 + 1;
     }
 }
+
 
 std::vector<std::string> QsumCMDF::split(const std::string& line, const std::string& delim)
 {
@@ -98,6 +181,7 @@ std::vector<std::string> QsumCMDF::split(const std::string& line, const std::str
     return res;
 }
 
+
 void QsumCMDF::remove_trailing_char(std::string& line, const std::string& charlist)
 {
     size_t n = line.size();
@@ -107,6 +191,7 @@ void QsumCMDF::remove_trailing_char(std::string& line, const std::string& charli
 
     line = line.substr(0,n);
 }
+
 
 bool QsumCMDF::update_variables()
 {
@@ -122,17 +207,18 @@ bool QsumCMDF::update_variables()
     return true;
 }
 
-void QsumCMDF::add_series(SmryAppl::input_list_type& input_charts, int smry_ind, const std::string& name, int axis_ind,
-                const std::string &xrange_input)
+
+void QsumCMDF::add_series(input_list_type& input_charts, int smry_ind, const std::string& name, int axis_ind,
+                const std::string &xrange_input, bool is_derived)
 {
 
     int chart_ind = input_charts.size() - 1;
 
-    std::tuple<int, std::string, int> new_smry_vect = std::make_tuple(smry_ind, name, axis_ind);
+    std::tuple<int, std::string, int, bool> new_smry_vect = std::make_tuple(smry_ind, name, axis_ind, is_derived);
 
-    SmryAppl::char_input_type chart_input = input_charts.back();
+    char_input_type chart_input = input_charts.back();
 
-    std::vector<SmryAppl::vect_input_type> smry_vect_input = std::get<0>(chart_input);
+    std::vector<vect_input_type> smry_vect_input = std::get<0>(chart_input);
 
     smry_vect_input.push_back(new_smry_vect);
 
@@ -142,14 +228,8 @@ void QsumCMDF::add_series(SmryAppl::input_list_type& input_charts, int smry_ind,
 }
 
 
-void QsumCMDF::make_charts_from_cmd(SmryAppl::input_list_type& input_charts, const std::string xrange_str )
+void QsumCMDF::make_charts_from_cmd(input_list_type& input_charts, const std::string xrange_str )
 {
-
-    m_processed_cmd_lines = process_cmdlines();
-
-    //for (auto l : m_processed_cmd_lines)
-    //    std::cout << " > " << l << std::endl;
-    //exit(1);
 
     int chart_ind = -1;
 
@@ -190,16 +270,39 @@ void QsumCMDF::make_charts_from_cmd(SmryAppl::input_list_type& input_charts, con
                 if (tokens.size() > 4)
                     axis_ind = std::stoi(tokens[4]);
 
-                add_series(input_charts, smry_case, tokens[3], axis_ind, xrange_str);
+                std::string derived_key = std::to_string(smry_case + 1) + ":" + tokens[3];
+
+                bool is_derived = derived_key_index(derived_key) > -1 ? true : false ;
+
+                add_series(input_charts, smry_case, tokens[3], axis_ind, xrange_str, is_derived);
             }
         }
     }
 }
 
-std::string QsumCMDF::make_new_line(const std::vector<std::string>& tokens, int smry_ind)
+
+std::string QsumCMDF::expand_line_add_series(const std::vector<std::string>& tokens, int smry_ind)
 {
     std::string new_str = tokens[0] + " " + tokens[1];
     new_str = new_str + " " + std::to_string(smry_ind + 1);
+
+    for (size_t m = 3; m < tokens.size(); m++)
+        new_str = new_str + " " + tokens[m];
+
+    return new_str;
+}
+
+std::string QsumCMDF::expand_line_define(const std::vector<std::string>& tokens, int smry_ind)
+{
+    std::string new_str = tokens[0] + " ";
+
+    std::string var_str = tokens[1];
+    var_str.replace(0,1,std::to_string(smry_ind + 1));
+
+    if (tokens[2] == "=")
+        new_str = new_str + " " + var_str + " None =";
+    else
+        new_str = new_str + " " + var_str + " " + tokens[2];
 
     for (size_t m = 3; m < tokens.size(); m++)
         new_str = new_str + " " + tokens[m];
@@ -238,6 +341,96 @@ std::vector<std::string> QsumCMDF::process_range(std::string& line, bool replace
 
     return str_list;
 }
+
+
+int QsumCMDF::replace_all(std::string& line, const std::string& repstr1, const std::string& repstr2, const std::string& newstr)
+{
+    int count = 0;
+
+    for (auto& repstr : {
+                repstr1, repstr2
+            }) {
+
+        int p1 = line.find(repstr);
+
+        while ( p1 != std::string::npos ) {
+
+            line.replace(p1, repstr.size(), newstr);
+            count ++;
+
+            p1 = line.find(repstr);
+        }
+    }
+
+    return count;
+}
+
+
+void QsumCMDF::update_rhs_cmd_lines_define()
+{
+    for (size_t n = 0; n < m_processed_cmd_lines.size(); n++) {
+
+        auto tokens = split(m_processed_cmd_lines[n], ", \t");
+
+        int p = 0;
+
+        if (tokens[0] == "DEFINE") {
+            auto p_smry_id = tokens[1].find(":");
+            int smry_id = std::stoi(tokens[1].substr(0,p_smry_id));
+            std::string smry_id_str = std::to_string(smry_id) + ":";
+
+            p = m_processed_cmd_lines[n].find_first_of("=");
+
+            while (p != std::string::npos) {
+
+                p = m_processed_cmd_lines[n].find_first_of("$", p + 1);
+                int p2;
+                bool space_delim = false;
+                if (p != std::string::npos){
+
+                    int p_end;
+
+                    if (m_processed_cmd_lines[n].substr(p+1,1) == "{"){
+                        // serarch for first of }
+                        p_end = m_processed_cmd_lines[n].find_first_of("}", p + 1);
+
+                        if (p_end == std::string::npos)
+                            throw std::invalid_argument("syntax error in DEFINE keyword, missing enclosing curly bracket");
+                    } else {
+                        // serarch for first of space
+                        space_delim = true;
+                        p_end = m_processed_cmd_lines[n].find_first_of(" ", p + 1);
+                    }
+
+                    std::string arg;
+
+                    if (p_end == std::string::npos)
+                        arg = m_processed_cmd_lines[n].substr(p);
+                    else
+                        arg = m_processed_cmd_lines[n].substr(p, p_end - p);
+
+                    if (arg.substr(0, 2) == "${")
+                        arg = arg.substr(2);
+                    else
+                        arg = arg.substr(1);
+
+                    p_smry_id = arg.find(":");
+
+                    if ((p_smry_id == std::string::npos) || (!is_number(arg.substr(1, p_smry_id - 1))))
+                        arg = smry_id_str + arg;
+
+                    arg = "${" + arg + "}";
+
+                    if (space_delim)
+                        m_processed_cmd_lines[n].replace(p, p_end-p, arg);
+                    else
+                        m_processed_cmd_lines[n].replace(p, p_end-p + 1, arg);
+                }
+            }
+        }
+    }
+}
+
 
 std::vector<std::string> QsumCMDF::process_cmdlines()
 {
@@ -332,7 +525,10 @@ std::vector<std::string> QsumCMDF::process_cmdlines()
 
             } else {
 
-                if (list_str[0] == '$') {
+                if (list_str.substr(0,2) == "${") {
+                    list_str = list_str.substr(2);
+                    list_str.pop_back();
+                } else if (list_str[0] == '$') {
                     list_str = list_str.substr(1);
                 }
             }
@@ -345,8 +541,10 @@ std::vector<std::string> QsumCMDF::process_cmdlines()
                 list_ind = std::distance(list_names.begin(), itr);
 
             } else {
-                std::cout << "error processing command file, well list not found \n";
-                exit(1);
+                std::string message("Error processing command file.");
+                message = message + " List '" + list_str + "' not found.";
+
+                throw std::runtime_error(message);
             }
 
             lnr++;
@@ -358,31 +556,48 @@ std::vector<std::string> QsumCMDF::process_cmdlines()
 
                 if (tokens[0] != "NEXT"){
 
-                    if ((tokens.size() > 2) && (tokens[0] == "ADD") && (tokens[1] == "SERIES") &&
+                    if ((tokens.size() > 2) && (tokens[0] == "DEFINE")) {
+
+                        if ( (tokens[1].substr(0,1) == "*") || (tokens[1].substr(0,1) == "?")) {
+                            for (size_t n = 0; n < m_num_smry_files; n++)
+                                loop_lines.push_back(expand_line_define(tokens, n));
+                        } else {
+
+                            if ((tokens[1].substr(1,1) != ":") && (tokens[1].substr(0,1) != "$")){
+                                auto p = m_cmd_lines[lnr].find(tokens[1]);
+                                m_cmd_lines[lnr].insert(p, "0:");
+                            }
+
+                            if (tokens[2] == "="){
+                                auto p = m_cmd_lines[lnr].find(tokens[2]);
+                                m_cmd_lines[lnr].insert(p, "None ");
+                            }
+
+                            loop_lines.push_back(m_cmd_lines[lnr]);
+                        }
+
+                    } else if ((tokens.size() > 2) && (tokens[0] == "ADD") && (tokens[1] == "SERIES") &&
                         ( (tokens[2] == "*") || (tokens[2] == "?"))) {
 
                         for (size_t n = 0; n < m_num_smry_files; n++)
-                            loop_lines.push_back(make_new_line(tokens, n));
+                            loop_lines.push_back(expand_line_add_series(tokens, n));
 
-                    } else
+                    } else {
                         loop_lines.push_back(m_cmd_lines[lnr]);
+                    }
                 }
 
                 lnr++;
                 tokens = split(m_cmd_lines[lnr], ", \t");
             }
-
+            // <-- loop_lines
 
             for (auto var : list_vect[list_ind]) {
                 for (auto v : loop_lines) {
-                    int p1 = v.find("$" + var_name);
-
-                    if ( p1 != std::string::npos ){
-                        auto tail = v.substr(p1+var_name.size() + 1);
-                        v = v.replace(p1, p1 + var_name.size(), var) + tail;
-                    }
-
-                    p1 = v.find_first_not_of(" \n");
+                    std::string repstr1 = "${" + var_name + "}";
+                    std::string repstr2 = "$" + var_name;
+                    int nrep = replace_all(v, repstr1, repstr2, var);
+                    auto p1 = v.find_first_not_of(" \n");
                     mod_cmd_lines.push_back(v.substr(p1));
                 }
             }
@@ -390,10 +605,30 @@ std::vector<std::string> QsumCMDF::process_cmdlines()
         } else {
 
             if ((tokens.size() > 2) && (tokens[0] == "ADD") && (tokens[1] == "SERIES") &&
-                 ( (tokens[2] == "*") || (tokens[2] == "?"))) {
+                    ( (tokens[2] == "*") || (tokens[2] == "?"))) {
 
                 for (size_t n = 0; n < m_num_smry_files; n++)
-                    mod_cmd_lines.push_back( make_new_line(tokens, n));
+                    mod_cmd_lines.push_back( expand_line_add_series(tokens, n));
+
+            } else if ((tokens.size() > 2) && (tokens[0] == "DEFINE")) {
+
+                if ( (tokens[1].substr(0,1) == "*") || (tokens[1].substr(0,1) == "?")) {
+                    for (size_t n = 0; n < m_num_smry_files; n++)
+                        mod_cmd_lines.push_back( expand_line_define(tokens, n));
+                } else {
+
+                    if (tokens[1].substr(1,1) != ":"){
+                        auto p = m_cmd_lines[lnr].find(tokens[1]);
+                        m_cmd_lines[lnr].insert(p, "0:");
+                    }
+
+                    if (tokens[2] == "=") {
+                        auto p = m_cmd_lines[lnr].find(tokens[2]);
+                        m_cmd_lines[lnr].insert(p, "None ");
+                    }
+
+                    mod_cmd_lines.push_back(m_cmd_lines[lnr]);
+                }
 
             } else {
 
@@ -421,3 +656,5 @@ void QsumCMDF::print_processd_cmd_lines()
     for (auto& line : m_processed_cmd_lines)
         std::cout << line << std::endl;
 }
+
+

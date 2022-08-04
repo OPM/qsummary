@@ -25,6 +25,7 @@ add_library(smry_appl
    appl/chartview.cpp
    appl/point_info.cpp
    appl/qsum_cmdf.cpp
+   appl/derived_smry.cpp
   )
 
 add_executable(qsummary main.cpp)
@@ -32,5 +33,4 @@ add_executable(qsummary main.cpp)
 target_link_libraries(smry_appl opmcommon Qt5::Widgets Qt5::Core Qt5::Charts stdc++fs  OpenMP::OpenMP_CXX)
 
 target_link_libraries(qsummary smry_appl ${Boost_LIBRARIES} Qt5::Widgets Qt5::Core Qt5::Charts OpenMP::OpenMP_CXX)
-
 
