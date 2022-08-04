@@ -34,3 +34,27 @@ target_link_libraries(smry_appl opmcommon Qt5::Widgets Qt5::Core Qt5::Charts std
 
 target_link_libraries(qsummary smry_appl ${Boost_LIBRARIES} Qt5::Widgets Qt5::Core Qt5::Charts OpenMP::OpenMP_CXX)
 
+
+add_executable(update_ref_define ./tests/update_ref_define.cpp)
+
+target_link_libraries(update_ref_define smry_appl ${Boost_LIBRARIES} Qt5::Widgets Qt5::Core Qt5::Charts OpenMP::OpenMP_CXX)
+
+
+enable_testing(true)
+
+add_executable(cmdf_define
+    tests/test_cmdf_define.cpp
+    )
+
+add_executable(cmdf_input_chart
+    tests/test_cmdf_input_charts.cpp
+    )
+
+
+add_test(NAME cmdf_define COMMAND cmdf_define)
+add_test(NAME cmdf_input_chart COMMAND cmdf_input_chart)
+
+
+target_link_libraries(cmdf_define PRIVATE smry_appl Qt5::Test Qt5::Core Qt5::Widgets Qt5::Charts stdc++fs)
+target_link_libraries(cmdf_input_chart PRIVATE smry_appl Qt5::Test Qt5::Core Qt5::Widgets Qt5::Charts stdc++fs)
+
