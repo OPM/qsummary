@@ -42,7 +42,7 @@ public:
     // name, expression and unit
     using define_vect_type = std::vector<std::tuple<std::string, std::string, std::string>>;
 
-    QsumCMDF(const std::string& cmd_file, int num_smry_files);
+    QsumCMDF(const std::string& cmd_file, int num_smry_files,const std::string& cmdl_list);
 
     void make_charts_from_cmd(input_list_type& input_charts, const std::string xrange_str );
 
@@ -71,7 +71,7 @@ private:
     void remove_trailing_char(std::string& line, const std::string& charlist);
     bool update_variables();
     std::vector<std::string> split(const std::string& line, const std::string& delim);
-    std::vector<std::string> process_cmdlines();
+    std::vector<std::string> process_cmdlines(const std::string& cmdl_list);
     std::vector<std::string> process_range(std::string& line, bool replace_on_line);
 
     std::string expand_line_add_series(const std::vector<std::string>& tokens, int smry_ind);

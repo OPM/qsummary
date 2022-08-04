@@ -64,7 +64,7 @@ static void printHelp()
     std::cout << "      Execution of program will stop if number of charts is greater than 200 \n";
     std::cout << " -h   Print help message and exit \n";
     std::cout << " -z   Ignore summary vectors with only zero values \n";
-    std::cout << " -l   List all vectors in summary file.  \n";
+    std::cout << " -l   Command line list to be used in command file  \n";
     std::cout << " -v   Create plot with vector. Example -v FOPR,FOPT will create \n";
     std::cout << "      one chart for each vector. Each chart holding series for all summary files. \n";
     std::cout << " -s   Separate charts on input folders. Simulation cases located in different  \n";
@@ -500,7 +500,6 @@ int main(int argc, char *argv[])
     const int max_number_of_charts = 2000;
 
     int c = 0;
-    bool listKeys    = false;
     bool plot_all    = false;
     bool separate    = false;
     bool ignore_zero = false;
@@ -508,10 +507,11 @@ int main(int argc, char *argv[])
     int max_threads  = 16;
     std::string xrange_str;
     std::string cmd_file;
+    std::string cmdl_list;
 
     std::string smry_vect = "";
 
-    while ((c = getopt(argc, argv, "ahf:lv:x:n:sz")) != -1) {
+    while ((c = getopt(argc, argv, "ahf:l:v:x:n:sz")) != -1) {
         switch (c) {
         case 'h':
             printHelp();
@@ -532,7 +532,7 @@ int main(int argc, char *argv[])
             max_threads = atoi(optarg);
             break;
         case 'l':
-            listKeys = true;
+            cmdl_list = optarg;
             break;
         case 's':
             separate = true;
@@ -652,18 +652,6 @@ int main(int argc, char *argv[])
         throw std::invalid_argument("not possible to combine -v and -f option");
     }
 
-    if (listKeys){
-
-        if (arg_vect.size() == 0)
-            throw std::invalid_argument("need one summary file for option -l");
-
-        if (file_type[0] == FileType::SMSPEC)
-            list_vectors(esmry_loader[0]);
-        else if (file_type[0] == FileType::ESMRY)
-            list_vectors(lodsmry_loader[0]);
-
-        exit(0);
-    }
 
     QApplication a(argc, argv);
 
@@ -763,7 +751,7 @@ int main(int argc, char *argv[])
 
     } else if (cmd_file.size() > 0) {
 
-        QsumCMDF cmdfile(cmd_file, num_files);
+        QsumCMDF cmdfile(cmd_file, num_files, cmdl_list);
 
         cmdfile.make_charts_from_cmd(input_charts, xrange_str);
 

@@ -24,7 +24,7 @@
 #include <fstream>
 
 
-QsumCMDF::QsumCMDF(const std::string& cmd_file, int num_smry_files)
+QsumCMDF::QsumCMDF(const std::string& cmd_file, int num_smry_files, const std::string& cmdl_list)
 
 {
     m_num_smry_files = num_smry_files;
@@ -33,12 +33,11 @@ QsumCMDF::QsumCMDF(const std::string& cmd_file, int num_smry_files)
     get_cmdlines(cmd_file);
 
     // variable $NUM_CASES is processed if used, stored in variable m_cmd_lines
-    //  > in future add variable $CMDL_LIST which is a list submitted on the command line
     update_variables();
 
     // processing cmd_lines storing this in m_processed_cmd_lines
     // for loops and lists are processed
-    m_processed_cmd_lines = process_cmdlines();
+    m_processed_cmd_lines = process_cmdlines(cmdl_list);
 
     update_rhs_cmd_lines_define();
 
@@ -432,11 +431,21 @@ void QsumCMDF::update_rhs_cmd_lines_define()
 }
 
 
-std::vector<std::string> QsumCMDF::process_cmdlines()
+std::vector<std::string> QsumCMDF::process_cmdlines(const std::string& cmdl_list)
 {
    // process LIST and FOR keywords
 
     std::vector<std::string> mod_cmd_lines;
+
+    if (cmdl_list.size() > 0){
+        auto list_items = split(cmdl_list, ",");
+
+        std::string new_list_str = "LIST NEW CMDL_LIST";
+        for (auto& var : list_items)
+            new_list_str = new_list_str + " " + var;
+
+        m_cmd_lines.insert(m_cmd_lines.begin(), new_list_str);
+    }
 
     std::vector<std::vector<std::string>> list_vect;
     std::vector<std::string> list_names;
@@ -543,6 +552,9 @@ std::vector<std::string> QsumCMDF::process_cmdlines()
             } else {
                 std::string message("Error processing command file.");
                 message = message + " List '" + list_str + "' not found.";
+
+                if (list_str == "CMDL_LIST")
+                    message = message + " This list should be submitted via the command line (option -l).";
 
                 throw std::runtime_error(message);
             }
