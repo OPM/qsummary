@@ -51,9 +51,9 @@ int main(int argc, char *argv[])
     std::unordered_map<int, std::unique_ptr<Opm::EclIO::ESmry>> esmry_loader;
     std::unordered_map<int, std::unique_ptr<Opm::EclIO::ExtESmry>> lodsmry_loader;
 
-    esmry_loader[0] = std::make_unique<Opm::EclIO::ESmry>("../tests/SENS0.SMSPEC");
-    lodsmry_loader[1] = std::make_unique<Opm::EclIO::ExtESmry>("../tests/SENS1.ESMRY");
-    lodsmry_loader[2] = std::make_unique<Opm::EclIO::ExtESmry>("../tests/SENS2.ESMRY");
+    esmry_loader[0] = std::make_unique<Opm::EclIO::ESmry>("../tests/smry_files/SENS0.SMSPEC");
+    lodsmry_loader[1] = std::make_unique<Opm::EclIO::ExtESmry>("../tests/smry_files/SENS1.ESMRY");
+    lodsmry_loader[2] = std::make_unique<Opm::EclIO::ExtESmry>("../tests/smry_files/SENS2.ESMRY");
 
     {
         int n = 0;
@@ -122,6 +122,16 @@ int main(int argc, char *argv[])
 
         {
             std::string cmd_file = "../tests/cmd_files/test1g.txt";
+            QsumCMDF cmdfile(cmd_file, num_files, "");
+
+            std::unique_ptr<DerivedSmry> derived_smry;
+            derived_smry = std::make_unique<DerivedSmry>(cmdfile, file_type, esmry_loader, lodsmry_loader);
+
+            add_to_file(refFile, derived_smry, n);
+        }
+
+        {
+            std::string cmd_file = "../tests/cmd_files/test3c.txt";
             QsumCMDF cmdfile(cmd_file, num_files, "");
 
             std::unique_ptr<DerivedSmry> derived_smry;

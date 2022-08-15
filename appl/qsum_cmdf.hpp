@@ -62,6 +62,9 @@ private:
     std::vector<std::string> m_cmd_lines;
     std::vector<std::string> m_processed_cmd_lines;
 
+    std::vector<std::vector<std::string>> m_list_vect;
+    std::vector<std::string> m_list_names;
+
     // name, rhs expression and unit
     define_vect_type m_define_vect;
 
@@ -71,8 +74,13 @@ private:
     void remove_trailing_char(std::string& line, const std::string& charlist);
     bool update_variables();
     std::vector<std::string> split(const std::string& line, const std::string& delim);
-    std::vector<std::string> process_cmdlines(const std::string& cmdl_list);
+    void process_cmdlines(const std::string& cmdl_list);
     std::vector<std::string> process_range(std::string& line, bool replace_on_line);
+
+    void process_for_loop(const std::vector<std::string>& tokens, int& lnr,
+                          std::map<std::string, std::string>& var_map,
+                          std::vector<std::string>& processed_for_lines);
+
 
     std::string expand_line_add_series(const std::vector<std::string>& tokens, int smry_ind);
     std::string expand_line_define(const std::vector<std::string>& tokens, int smry_ind);

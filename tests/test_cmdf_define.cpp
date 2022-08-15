@@ -30,6 +30,8 @@ private slots:
     void test_2e();
     void test_2f();
     void test_2g();
+
+    void test_3c();
 };
 
 // https://doc.qt.io/qt-6/qtest-tutorial.html
@@ -923,6 +925,145 @@ void TestQsummary::test_2g()
         }
     }
 }
+
+void TestQsummary::test_3c()
+{
+    int num_files = 3;
+
+    std::vector<FileType> file_type;
+    file_type.resize(num_files);
+
+    file_type[0] = FileType::SMSPEC;
+    file_type[1] = FileType::ESMRY;
+    file_type[2] = FileType::ESMRY;
+
+    std::unordered_map<int, std::unique_ptr<Opm::EclIO::ESmry>> esmry_loader;
+    std::unordered_map<int, std::unique_ptr<Opm::EclIO::ExtESmry>> lodsmry_loader;
+
+    esmry_loader[0] = std::make_unique<Opm::EclIO::ESmry>("../tests/smry_files/SENS0.SMSPEC");
+    lodsmry_loader[1] = std::make_unique<Opm::EclIO::ExtESmry>("../tests/smry_files/SENS1.ESMRY");
+    lodsmry_loader[2] = std::make_unique<Opm::EclIO::ExtESmry>("../tests/smry_files/SENS2.ESMRY");
+
+    Opm::EclIO::EclFile refFile("../tests/REF_DEFINE.DATA");
+
+    std::vector<var_type> ref_var_vect;
+    std::vector<std::vector<param_type>> ref_params_vect;
+    std::vector<std::string> ref_expr_vect;
+
+    {
+        std::string cmd_file = "../tests/cmd_files/test3c.txt";
+        QsumCMDF cmdfile(cmd_file, num_files, "");
+
+        SmryAppl::input_list_type input_charts;
+
+        cmdfile.make_charts_from_cmd(input_charts, "");
+
+        std::unique_ptr<DerivedSmry> derived_smry;
+        derived_smry = std::make_unique<DerivedSmry>(cmdfile, file_type, esmry_loader, lodsmry_loader);
+
+        auto test1g = derived_smry->get_table();
+        //derived_smry->print_m_define_table();
+
+        ref_var_vect.resize(9);
+        ref_params_vect.resize(9);
+        ref_expr_vect.resize(9);
+
+        ref_expr_vect[0] = "X1/(X1+X2)";
+        ref_expr_vect[1] = "X1/(X1+X2)";
+        ref_expr_vect[2] = "X1/(X1+X2)";
+        ref_expr_vect[3] = "X1/(X1+X2)";
+        ref_expr_vect[4] = "X1/(X1+X2)";
+        ref_expr_vect[5] = "X1/(X1+X2)";
+        ref_expr_vect[6] = "X1/(X1+X2)";
+        ref_expr_vect[7] = "X1/(X1+X2)";
+        ref_expr_vect[8] = "X1/(X1+X2)";
+
+        ref_var_vect[0] = {0, "WWCT2:PROD-1", "None"};
+        ref_var_vect[1] = {0, "WWCT2:PROD-2", "None"};
+        ref_var_vect[2] = {0, "WWCT2:PROD-3", "None"};
+        ref_var_vect[3] = {1, "WWCT2:PROD-1", "None"};
+        ref_var_vect[4] = {1, "WWCT2:PROD-2", "None"};
+        ref_var_vect[5] = {1, "WWCT2:PROD-3", "None"};
+        ref_var_vect[6] = {2, "WWCT2:PROD-1", "None"};
+        ref_var_vect[7] = {2, "WWCT2:PROD-2", "None"};
+        ref_var_vect[8] = {2, "WWCT2:PROD-3", "None"};
+
+
+        ref_params_vect[0] = { {"X1", 0, "WWPR:PROD-1"},
+                               {"X2", 0, "WOPR:PROD-1"},
+                             };
+
+        ref_params_vect[1] = { {"X1", 0, "WWPR:PROD-2"},
+                               {"X2", 0, "WOPR:PROD-2"},
+                             };
+
+        ref_params_vect[2] = { {"X1", 0, "WWPR:PROD-3"},
+                               {"X2", 0, "WOPR:PROD-3"},
+                             };
+
+        ref_params_vect[3] = { {"X1", 1, "WWPR:PROD-1"},
+                               {"X2", 1, "WOPR:PROD-1"},
+                             };
+
+        ref_params_vect[4] = { {"X1", 1, "WWPR:PROD-2"},
+                               {"X2", 1, "WOPR:PROD-2"},
+                             };
+
+        ref_params_vect[5] = { {"X1", 1, "WWPR:PROD-3"},
+                               {"X2", 1, "WOPR:PROD-3"},
+                             };
+
+        ref_params_vect[6] = { {"X1", 2, "WWPR:PROD-1"},
+                               {"X2", 2, "WOPR:PROD-1"},
+                             };
+
+        ref_params_vect[7] = { {"X1", 2, "WWPR:PROD-2"},
+                               {"X2", 2, "WOPR:PROD-2"},
+                             };
+
+        ref_params_vect[8] = { {"X1", 2, "WWPR:PROD-3"},
+                               {"X2", 2, "WOPR:PROD-3"},
+                             };
+
+        QCOMPARE(check_define(test1g, ref_var_vect, ref_params_vect, ref_expr_vect), true);
+
+
+        std::vector<std::vector<float>> ref_data;
+        std::vector<std::vector<float>> test_data;
+
+        ref_data.push_back(refFile.get<float>("REF_25"));
+        ref_data.push_back(refFile.get<float>("REF_26"));
+        ref_data.push_back(refFile.get<float>("REF_27"));
+        ref_data.push_back(refFile.get<float>("REF_28"));
+        ref_data.push_back(refFile.get<float>("REF_29"));
+        ref_data.push_back(refFile.get<float>("REF_30"));
+        ref_data.push_back(refFile.get<float>("REF_31"));
+        ref_data.push_back(refFile.get<float>("REF_32"));
+        ref_data.push_back(refFile.get<float>("REF_33"));
+
+        test_data.push_back(derived_smry->get(0, "WWCT2:PROD-1"));
+        test_data.push_back(derived_smry->get(0, "WWCT2:PROD-2"));
+        test_data.push_back(derived_smry->get(0, "WWCT2:PROD-3"));
+        test_data.push_back(derived_smry->get(1, "WWCT2:PROD-1"));
+        test_data.push_back(derived_smry->get(1, "WWCT2:PROD-2"));
+        test_data.push_back(derived_smry->get(1, "WWCT2:PROD-3"));
+        test_data.push_back(derived_smry->get(2, "WWCT2:PROD-1"));
+        test_data.push_back(derived_smry->get(2, "WWCT2:PROD-2"));
+        test_data.push_back(derived_smry->get(2, "WWCT2:PROD-3"));
+
+        QCOMPARE(test_data.size(), ref_data.size());
+
+        for (size_t n = 0; n < test_data.size(); n++){
+            QCOMPARE(test_data[n].size(), ref_data[n].size());
+
+            for (size_t m = 0; m < test_data[n].size(); m++)
+                QCOMPARE(test_data[n][m], ref_data[n][m]);
+        }
+
+
+    }
+}
+
 
 
 QTEST_MAIN(TestQsummary)
