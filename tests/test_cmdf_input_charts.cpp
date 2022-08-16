@@ -15,12 +15,15 @@ class TestQsummary: public QObject
 
 private slots:
 
-    void test_1a();
-    void test_1c();
-    void test_1f();
-    void test_2a();
-    void test_2b();
-    void test_2c();
+   void test_1a();
+   void test_1c();
+   void test_1f();
+   void test_2a();
+   void test_2b();
+   void test_2c();
+   void test_3a();
+   void test_3b();
+   void test_3c();
 };
 
 // https://doc.qt.io/qt-6/qtest-tutorial.html
@@ -60,7 +63,6 @@ void print_input_charts(const SmryAppl::input_list_type& input_charts)
         }
     }
 }
-
 
 
 
@@ -452,6 +454,242 @@ void TestQsummary::test_2c()
         ref_vect_input[5].push_back({0, "WGOR:PROD-2", -1, false});
         ref_vect_input[5].push_back({1, "WGOR:PROD-2", -1, false});
         ref_vect_input[5].push_back({2, "WGOR:PROD-2", -1, false});
+
+        std::vector<SmryAppl::vect_input_type> test_vect_input;
+
+        for (size_t t = 0; t < ref_vect_input.size(); t++){
+            test_vect_input = std::get<0>(input_charts[t]);
+
+            QCOMPARE(test_vect_input.size(), ref_vect_input[t].size());
+
+            for (size_t n = 0; n < test_vect_input.size(); n++)
+                QCOMPARE(test_vect_input[n], ref_vect_input[t][n]);
+
+        }
+    }
+}
+
+void TestQsummary::test_3a()
+{
+    int num_files = 3;
+
+    std::vector<FileType> file_type;
+    file_type.resize(num_files);
+
+    file_type[0] = FileType::SMSPEC;
+    file_type[1] = FileType::ESMRY;
+    file_type[2] = FileType::ESMRY;
+
+    std::unordered_map<int, std::unique_ptr<Opm::EclIO::ESmry>> esmry_loader;
+    std::unordered_map<int, std::unique_ptr<Opm::EclIO::ExtESmry>> lodsmry_loader;
+
+    esmry_loader[0] = std::make_unique<Opm::EclIO::ESmry>("../tests/smry_files/SENS0.SMSPEC");
+    lodsmry_loader[1] = std::make_unique<Opm::EclIO::ExtESmry>("../tests/smry_files/SENS1.ESMRY");
+    lodsmry_loader[2] = std::make_unique<Opm::EclIO::ExtESmry>("../tests/smry_files/SENS2.ESMRY");
+
+    {
+        std::string cmd_file = "../tests/cmd_files/test3a.txt";
+        QsumCMDF cmdfile(cmd_file, num_files, "");
+
+        SmryAppl::input_list_type input_charts;
+
+        cmdfile.make_charts_from_cmd(input_charts, "");
+
+        //print_input_charts(input_charts);
+
+        QCOMPARE(input_charts.size(), 9);
+
+        std::vector<std::vector<SmryAppl::vect_input_type>> ref_vect_input;
+
+        ref_vect_input.push_back({});
+        ref_vect_input[0].push_back({0, "WWCT:PROD-1", -1, false});
+
+        ref_vect_input.push_back({});
+        ref_vect_input[1].push_back({0, "WWCT:PROD-2", -1, false});
+
+        ref_vect_input.push_back({});
+        ref_vect_input[2].push_back({0, "WWCT:PROD-3", -1, false});
+
+        ref_vect_input.push_back({});
+        ref_vect_input[3].push_back({1, "WWCT:PROD-1", -1, false});
+
+        ref_vect_input.push_back({});
+        ref_vect_input[4].push_back({1, "WWCT:PROD-2", -1, false});
+
+        ref_vect_input.push_back({});
+        ref_vect_input[5].push_back({1, "WWCT:PROD-3", -1, false});
+
+        ref_vect_input.push_back({});
+        ref_vect_input[6].push_back({2, "WWCT:PROD-1", -1, false});
+
+        ref_vect_input.push_back({});
+        ref_vect_input[7].push_back({2, "WWCT:PROD-2", -1, false});
+
+        ref_vect_input.push_back({});
+        ref_vect_input[8].push_back({2, "WWCT:PROD-3", -1, false});
+
+        std::vector<SmryAppl::vect_input_type> test_vect_input;
+
+        for (size_t t = 0; t < ref_vect_input.size(); t++){
+            test_vect_input = std::get<0>(input_charts[t]);
+
+            QCOMPARE(test_vect_input.size(), ref_vect_input[t].size());
+
+            for (size_t n = 0; n < test_vect_input.size(); n++)
+                QCOMPARE(test_vect_input[n], ref_vect_input[t][n]);
+
+        }
+
+    }
+}
+
+
+void TestQsummary::test_3b()
+{
+    int num_files = 3;
+
+    std::vector<FileType> file_type;
+    file_type.resize(num_files);
+
+    file_type[0] = FileType::SMSPEC;
+    file_type[1] = FileType::ESMRY;
+    file_type[2] = FileType::ESMRY;
+
+    std::unordered_map<int, std::unique_ptr<Opm::EclIO::ESmry>> esmry_loader;
+    std::unordered_map<int, std::unique_ptr<Opm::EclIO::ExtESmry>> lodsmry_loader;
+
+    esmry_loader[0] = std::make_unique<Opm::EclIO::ESmry>("../tests/smry_files/SENS0.SMSPEC");
+    lodsmry_loader[1] = std::make_unique<Opm::EclIO::ExtESmry>("../tests/smry_files/SENS1.ESMRY");
+    lodsmry_loader[2] = std::make_unique<Opm::EclIO::ExtESmry>("../tests/smry_files/SENS2.ESMRY");
+
+    {
+        std::string cmd_file = "../tests/cmd_files/test3b.txt";
+        QsumCMDF cmdfile(cmd_file, num_files, "");
+
+        SmryAppl::input_list_type input_charts;
+
+        cmdfile.make_charts_from_cmd(input_charts, "");
+
+        //print_input_charts(input_charts);
+
+        QCOMPARE(input_charts.size(), 3);
+
+        std::vector<std::vector<SmryAppl::vect_input_type>> ref_vect_input;
+
+        ref_vect_input.push_back({});
+        ref_vect_input[0].push_back({0, "WOPR:PROD-1", -1, false});
+        ref_vect_input[0].push_back({1, "WOPR:PROD-1", -1, false});
+        ref_vect_input[0].push_back({2, "WOPR:PROD-1", -1, false});
+        ref_vect_input[0].push_back({0, "WOPR:PROD-2", -1, false});
+        ref_vect_input[0].push_back({1, "WOPR:PROD-2", -1, false});
+        ref_vect_input[0].push_back({2, "WOPR:PROD-2", -1, false});
+        ref_vect_input[0].push_back({0, "WOPR:PROD-3", -1, false});
+        ref_vect_input[0].push_back({1, "WOPR:PROD-3", -1, false});
+        ref_vect_input[0].push_back({2, "WOPR:PROD-3", -1, false});
+
+        ref_vect_input.push_back({});
+        ref_vect_input[1].push_back({0, "WWCT:PROD-1", -1, false});
+        ref_vect_input[1].push_back({1, "WWCT:PROD-1", -1, false});
+        ref_vect_input[1].push_back({2, "WWCT:PROD-1", -1, false});
+        ref_vect_input[1].push_back({0, "WWCT:PROD-2", -1, false});
+        ref_vect_input[1].push_back({1, "WWCT:PROD-2", -1, false});
+        ref_vect_input[1].push_back({2, "WWCT:PROD-2", -1, false});
+        ref_vect_input[1].push_back({0, "WWCT:PROD-3", -1, false});
+        ref_vect_input[1].push_back({1, "WWCT:PROD-3", -1, false});
+        ref_vect_input[1].push_back({2, "WWCT:PROD-3", -1, false});
+
+        ref_vect_input.push_back({});
+        ref_vect_input[2].push_back({0, "WGOR:PROD-1", -1, false});
+        ref_vect_input[2].push_back({1, "WGOR:PROD-1", -1, false});
+        ref_vect_input[2].push_back({2, "WGOR:PROD-1", -1, false});
+        ref_vect_input[2].push_back({0, "WGOR:PROD-2", -1, false});
+        ref_vect_input[2].push_back({1, "WGOR:PROD-2", -1, false});
+        ref_vect_input[2].push_back({2, "WGOR:PROD-2", -1, false});
+        ref_vect_input[2].push_back({0, "WGOR:PROD-3", -1, false});
+        ref_vect_input[2].push_back({1, "WGOR:PROD-3", -1, false});
+        ref_vect_input[2].push_back({2, "WGOR:PROD-3", -1, false});
+
+        std::vector<SmryAppl::vect_input_type> test_vect_input;
+
+        for (size_t t = 0; t < ref_vect_input.size(); t++){
+            test_vect_input = std::get<0>(input_charts[t]);
+
+            QCOMPARE(test_vect_input.size(), ref_vect_input[t].size());
+
+            for (size_t n = 0; n < test_vect_input.size(); n++)
+                QCOMPARE(test_vect_input[n], ref_vect_input[t][n]);
+
+        }
+    }
+}
+
+void TestQsummary::test_3c()
+{
+    int num_files = 3;
+
+    std::vector<FileType> file_type;
+    file_type.resize(num_files);
+
+    file_type[0] = FileType::SMSPEC;
+    file_type[1] = FileType::ESMRY;
+    file_type[2] = FileType::ESMRY;
+
+    std::unordered_map<int, std::unique_ptr<Opm::EclIO::ESmry>> esmry_loader;
+    std::unordered_map<int, std::unique_ptr<Opm::EclIO::ExtESmry>> lodsmry_loader;
+
+    esmry_loader[0] = std::make_unique<Opm::EclIO::ESmry>("../tests/smry_files/SENS0.SMSPEC");
+    lodsmry_loader[1] = std::make_unique<Opm::EclIO::ExtESmry>("../tests/smry_files/SENS1.ESMRY");
+    lodsmry_loader[2] = std::make_unique<Opm::EclIO::ExtESmry>("../tests/smry_files/SENS2.ESMRY");
+
+    {
+        std::string cmd_file = "../tests/cmd_files/test3c.txt";
+        QsumCMDF cmdfile(cmd_file, num_files, "");
+
+        SmryAppl::input_list_type input_charts;
+
+        cmdfile.make_charts_from_cmd(input_charts, "");
+
+        //print_input_charts(input_charts);
+
+        QCOMPARE(input_charts.size(), 9);
+
+        std::vector<std::vector<SmryAppl::vect_input_type>> ref_vect_input;
+
+        ref_vect_input.push_back({});
+        ref_vect_input[0].push_back({0, "WWCT:PROD-1", -1, false});
+        ref_vect_input[0].push_back({0, "WWCT2:PROD-1", -1, true});
+
+        ref_vect_input.push_back({});
+        ref_vect_input[1].push_back({1, "WWCT:PROD-1", -1, false});
+        ref_vect_input[1].push_back({1, "WWCT2:PROD-1", -1, true});
+
+        ref_vect_input.push_back({});
+        ref_vect_input[2].push_back({2, "WWCT:PROD-1", -1, false});
+        ref_vect_input[2].push_back({2, "WWCT2:PROD-1", -1, true});
+
+        ref_vect_input.push_back({});
+        ref_vect_input[3].push_back({0, "WWCT:PROD-2", -1, false});
+        ref_vect_input[3].push_back({0, "WWCT2:PROD-2", -1, true});
+
+        ref_vect_input.push_back({});
+        ref_vect_input[4].push_back({1, "WWCT:PROD-2", -1, false});
+        ref_vect_input[4].push_back({1, "WWCT2:PROD-2", -1, true});
+
+        ref_vect_input.push_back({});
+        ref_vect_input[5].push_back({2, "WWCT:PROD-2", -1, false});
+        ref_vect_input[5].push_back({2, "WWCT2:PROD-2", -1, true});
+
+        ref_vect_input.push_back({});
+        ref_vect_input[6].push_back({0, "WWCT:PROD-3", -1, false});
+        ref_vect_input[6].push_back({0, "WWCT2:PROD-3", -1, true});
+
+        ref_vect_input.push_back({});
+        ref_vect_input[7].push_back({1, "WWCT:PROD-3", -1, false});
+        ref_vect_input[7].push_back({1, "WWCT2:PROD-3", -1, true});
+
+        ref_vect_input.push_back({});
+        ref_vect_input[8].push_back({2, "WWCT:PROD-3", -1, false});
+        ref_vect_input[8].push_back({2, "WWCT2:PROD-3", -1, true});
 
         std::vector<SmryAppl::vect_input_type> test_vect_input;
 

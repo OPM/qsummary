@@ -37,7 +37,7 @@ QsumCMDF::QsumCMDF(const std::string& cmd_file, int num_smry_files, const std::s
 
     // processing cmd_lines storing this in m_processed_cmd_lines
     // for loops and lists are processed
-    m_processed_cmd_lines = process_cmdlines(cmdl_list);
+    process_cmdlines(cmdl_list);
 
     update_rhs_cmd_lines_define();
 
@@ -430,8 +430,108 @@ void QsumCMDF::update_rhs_cmd_lines_define()
     }
 }
 
+void QsumCMDF::process_for_loop(const std::vector<std::string>& tokens,
+                                int& lnr, std::map<std::string, std::string>& var_map,
+                                std::vector<std::string>& processed_for_lines)
+{
+    std::string var_name = tokens[1];
+    std::string list_str = tokens[3];
 
-std::vector<std::string> QsumCMDF::process_cmdlines(const std::string& cmdl_list)
+    if (list_str.substr(0,6) == "RANGE(") {
+
+        // make new list and add this to list_vect
+        // list names = DUMMY_LIST_X, when x is the first available integer
+
+        auto range_list = process_range(m_cmd_lines[lnr], false);
+
+        int tmp_num = 0;
+        std::string tmp_list_name = "DUMMY_LIST_" + std::to_string(tmp_num);
+
+        while (std::find(m_list_names.begin(), m_list_names.end(), tmp_list_name) != m_list_names.end()) {
+            tmp_num ++;
+            tmp_list_name = "DUMMY_LIST_" + std::to_string(tmp_num);
+        }
+
+        m_list_names.push_back(tmp_list_name);
+        m_list_vect.push_back(range_list);
+
+        list_str = tmp_list_name;
+
+    } else {
+
+        if (list_str.substr(0,2) == "${") {
+            list_str = list_str.substr(2);
+            list_str.pop_back();
+        } else if (list_str[0] == '$') {
+            list_str = list_str.substr(1);
+        }
+    }
+
+    int list_ind = -1;
+
+    std::vector<std::string>::iterator itr = std::find(m_list_names.begin(), m_list_names.end(), list_str);
+    if (itr != m_list_names.end()) {
+
+        list_ind = std::distance(m_list_names.begin(), itr);
+
+    } else {
+        std::string message("Error processing command file.");
+        message = message + " List '" + list_str + "' not found.";
+
+        if (list_str == "CMDL_LIST")
+            message = message + " This list should be submitted via the command line (option -l).";
+
+        throw std::runtime_error(message);
+    }
+
+    int lnr_from = lnr + 1;
+    int lnr_to;
+
+    for (auto var : m_list_vect[list_ind]) {
+
+        lnr = lnr_from;
+
+        auto tokens2 = split(m_cmd_lines[lnr], ", \t");
+
+        while (tokens2[0] != "NEXT") {
+
+            if (tokens2[0] == "FOR") {
+                var_map[var_name] = var;
+                process_for_loop(tokens2, lnr, var_map, processed_for_lines);
+
+            } else {
+
+                std::string new_line = m_cmd_lines[lnr];
+
+                std::string repstr1 = "${" + var_name + "}";
+                std::string repstr2 = "$" + var_name;
+
+                int nrep = replace_all(new_line, repstr1, repstr2, var);
+
+                auto p1 = new_line.find_first_not_of(" \n");
+
+                if (p1 != std::string::npos)
+                    new_line = new_line.substr(p1);
+
+                for (auto it = var_map.begin(); it != var_map.end(); it++) {
+                    std::string repstr1 = "${" + it->first + "}";
+                    std::string repstr2 = "$" + it->first;
+
+                    int nrep = replace_all(new_line, repstr1, repstr2, it->second);
+                }
+
+                processed_for_lines.push_back(new_line);
+
+                lnr ++;
+            }
+
+            tokens2 = split(m_cmd_lines[lnr], ", \t");
+        }
+    }
+}
+
+
+void QsumCMDF::process_cmdlines(const std::string& cmdl_list)
 {
    // process LIST and FOR keywords
 
@@ -447,10 +547,7 @@ std::vector<std::string> QsumCMDF::process_cmdlines(const std::string& cmdl_list
         m_cmd_lines.insert(m_cmd_lines.begin(), new_list_str);
     }
 
-    std::vector<std::vector<std::string>> list_vect;
-    std::vector<std::string> list_names;
-
-    size_t lnr = 0;
+    int lnr = 0;
 
     while (lnr <  (m_cmd_lines.size())){
 
@@ -470,19 +567,19 @@ std::vector<std::string> QsumCMDF::process_cmdlines(const std::string& cmdl_list
 
             std::string name = tokens[2];
             int list_ind = -1;
-            std::vector<std::string>::iterator itr = std::find(list_names.begin(), list_names.end(), name);
+            std::vector<std::string>::iterator itr = std::find(m_list_names.begin(), m_list_names.end(), name);
 
             if (tokens[1] == "NEW") {
 
-                if (itr != list_names.end()) {
+                if (itr != m_list_names.end()) {
 
-                    list_ind = std::distance(list_names.begin(), itr);
-                    list_vect[list_ind].clear();
+                    list_ind = std::distance(m_list_names.begin(), itr);
+                    m_list_vect[list_ind].clear();
 
                 } else {
-                    list_names.push_back(name);
-                    list_vect.push_back({});
-                    list_ind = list_names.size() -1;
+                    m_list_names.push_back(name);
+                    m_list_vect.push_back({});
+                    list_ind = m_list_names.size() -1;
                 }
 
                 if (tokens[3].substr(0,6) == "RANGE("){
@@ -492,125 +589,61 @@ std::vector<std::string> QsumCMDF::process_cmdlines(const std::string& cmdl_list
                 }
 
                 for (size_t n = 3; n < tokens.size(); n++)
-                    list_vect[list_ind].push_back(tokens[n]);
+                    m_list_vect[list_ind].push_back(tokens[n]);
 
             } else if (tokens[1] == "ADD") {
 
-                if (itr == list_names.end()) {
+                if (itr == m_list_names.end()) {
                     std::cout << "error processing command file, LIST + ADD, list not found \n";
                     exit(1);
                 }
 
-                list_ind = std::distance(list_names.begin(), itr);
+                list_ind = std::distance(m_list_names.begin(), itr);
 
                 for (size_t n = 3; n < tokens.size(); n++)
-                    list_vect[list_ind].push_back(tokens[n]);
+                    m_list_vect[list_ind].push_back(tokens[n]);
             }
 
         } else if (tokens[0] == "FOR"){
 
-            std::string var_name = tokens[1];
-            std::string list_str = tokens[3];
+            std::vector<std::string> processed_for_lines;
 
-            if (list_str.substr(0,6) == "RANGE(") {
+            std::map<std::string, std::string> var_map;
 
-                // make new list and add this to list_vect
-                // list names = DUMMY_LIST_X, when x is the first available integer
+            process_for_loop(tokens, lnr, var_map, processed_for_lines);
 
-                auto range_list = process_range(m_cmd_lines[lnr], false);
+            for (auto line: processed_for_lines) {
 
-                int tmp_num = 0;
-                std::string tmp_list_name = "DUMMY_LIST_" + std::to_string(tmp_num);
+                tokens = split(line, ", \t");
 
-                while (std::find(list_names.begin(), list_names.end(), tmp_list_name) != list_names.end()) {
-                    tmp_num ++;
-                    tmp_list_name = "DUMMY_LIST_" + std::to_string(tmp_num);
-                }
-
-                list_names.push_back(tmp_list_name);
-                list_vect.push_back(range_list);
-
-                list_str = tmp_list_name;
-
-            } else {
-
-                if (list_str.substr(0,2) == "${") {
-                    list_str = list_str.substr(2);
-                    list_str.pop_back();
-                } else if (list_str[0] == '$') {
-                    list_str = list_str.substr(1);
-                }
-            }
-
-            int list_ind = -1;
-
-            std::vector<std::string>::iterator itr = std::find(list_names.begin(), list_names.end(), list_str);
-            if (itr != list_names.end()) {
-
-                list_ind = std::distance(list_names.begin(), itr);
-
-            } else {
-                std::string message("Error processing command file.");
-                message = message + " List '" + list_str + "' not found.";
-
-                if (list_str == "CMDL_LIST")
-                    message = message + " This list should be submitted via the command line (option -l).";
-
-                throw std::runtime_error(message);
-            }
-
-            lnr++;
-            auto tokens = split(m_cmd_lines[lnr], ", \t");
-
-            std::vector<std::string> loop_lines;
-
-            while (tokens[0] != "NEXT") {
-
-                if (tokens[0] != "NEXT"){
-
-                    if ((tokens.size() > 2) && (tokens[0] == "DEFINE")) {
-
-                        if ( (tokens[1].substr(0,1) == "*") || (tokens[1].substr(0,1) == "?")) {
-                            for (size_t n = 0; n < m_num_smry_files; n++)
-                                loop_lines.push_back(expand_line_define(tokens, n));
-                        } else {
-
-                            if ((tokens[1].substr(1,1) != ":") && (tokens[1].substr(0,1) != "$")){
-                                auto p = m_cmd_lines[lnr].find(tokens[1]);
-                                m_cmd_lines[lnr].insert(p, "0:");
-                            }
-
-                            if (tokens[2] == "="){
-                                auto p = m_cmd_lines[lnr].find(tokens[2]);
-                                m_cmd_lines[lnr].insert(p, "None ");
-                            }
-
-                            loop_lines.push_back(m_cmd_lines[lnr]);
-                        }
-
-                    } else if ((tokens.size() > 2) && (tokens[0] == "ADD") && (tokens[1] == "SERIES") &&
+                if ((tokens.size() > 2) && (tokens[0] == "ADD") && (tokens[1] == "SERIES") &&
                         ( (tokens[2] == "*") || (tokens[2] == "?"))) {
 
+                    for (size_t n = 0; n < m_num_smry_files; n++)
+                        mod_cmd_lines.push_back( expand_line_add_series(tokens, n));
+
+                } else if ((tokens.size() > 2) && (tokens[0] == "DEFINE")) {
+
+                    if ( (tokens[1].substr(0,1) == "*") || (tokens[1].substr(0,1) == "?")) {
                         for (size_t n = 0; n < m_num_smry_files; n++)
-                            loop_lines.push_back(expand_line_add_series(tokens, n));
-
+                            mod_cmd_lines.push_back( expand_line_define(tokens, n));
                     } else {
-                        loop_lines.push_back(m_cmd_lines[lnr]);
+
+                        if (tokens[1].substr(1,1) != ":") {
+                            auto p =line.find(tokens[1]);
+                            line.insert(p, "0:");
+                        }
+
+                        if (tokens[2] == "=") {
+                            auto p = line.find(tokens[2]);
+                            line.insert(p, "None ");
+                        }
+
+                        mod_cmd_lines.push_back(line);
                     }
-                }
 
-                lnr++;
-                tokens = split(m_cmd_lines[lnr], ", \t");
-            }
-            // <-- loop_lines
-
-            for (auto var : list_vect[list_ind]) {
-                for (auto v : loop_lines) {
-                    std::string repstr1 = "${" + var_name + "}";
-                    std::string repstr2 = "$" + var_name;
-                    int nrep = replace_all(v, repstr1, repstr2, var);
-                    auto p1 = v.find_first_not_of(" \n");
-                    mod_cmd_lines.push_back(v.substr(p1));
+                } else {
+                    mod_cmd_lines.push_back( line);
                 }
             }
 
@@ -652,7 +685,7 @@ std::vector<std::string> QsumCMDF::process_cmdlines(const std::string& cmdl_list
         lnr++;
     }
 
-    return mod_cmd_lines;
+    m_processed_cmd_lines = mod_cmd_lines;
 }
 
 
