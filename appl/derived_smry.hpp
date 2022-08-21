@@ -52,6 +52,10 @@ public:
                 std::unordered_map<int, std::unique_ptr<Opm::EclIO::ESmry>>& esmry_loader,
                 std::unordered_map<int, std::unique_ptr<Opm::EclIO::ExtESmry>>& lodsmry_loader);
 
+    void recalc(const std::vector<FileType>& file_type,
+                std::unordered_map<int, std::unique_ptr<Opm::EclIO::ESmry>>& esmry_loader,
+                std::unordered_map<int, std::unique_ptr<Opm::EclIO::ExtESmry>>& lodsmry_loader);
+
     const std::vector<float>& get(int smry_id, const std::string& name) const;
     const std::string& get_unit(int smry_id, const std::string& name) const;
 
