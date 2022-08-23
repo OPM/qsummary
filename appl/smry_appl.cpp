@@ -41,7 +41,7 @@ SmryAppl::SmryAppl(std::vector<std::string> arg_vect, loader_list_type& loaders,
     auto fileList = std::get<0>(loaders);
     int max_pr_chart = max_vect_chart(chart_input);
 
-    if (fileList.size()>0) {
+    if (fileList.size() > 0) {
 
         m_smry_files = std::move(std::get<0>(loaders));
         m_file_type = std::move(std::get<1>(loaders));
@@ -156,15 +156,31 @@ SmryAppl::SmryAppl(std::vector<std::string> arg_vect, loader_list_type& loaders,
         }
     }
 
-    std::ostringstream ss;
+    if (fileList.size() > 0) {
 
-    ss << "I/O  opening " << std::fixed << std::setprecision(5) << total_opening;
-    ss << " sec, loading: " << std::fixed << std::setprecision(5) << total_loading << " sec";
+        m_smry_loaded = true;
 
-    qInfo() << "Finished loading from command line";
-    qInfo() << QString::fromStdString(ss.str());
+        std::ostringstream ss;
 
-    std::cout << ss.str() << std::endl;
+        ss << "I/O  opening " << std::fixed << std::setprecision(5) << total_opening;
+        ss << " sec, loading: " << std::fixed << std::setprecision(5) << total_loading << " sec";
+
+        qInfo() << "Finished loading from command line";
+        qInfo() << QString::fromStdString(ss.str());
+
+        std::cout << ss.str() << std::endl;
+
+    } else {
+
+        m_smry_loaded = false;
+        lbl_plot->setText("use <ctrl> + o to open a summary file ");
+        this->le_commands->setEnabled(0);
+
+        QPalette *palette = new QPalette();
+        palette->setColor ( QPalette::Text,Qt::gray );
+
+        lbl_cmd->setPalette ( *palette );
+    }
 }
 
 void SmryAppl::init_new_chart()
@@ -2198,7 +2214,8 @@ bool SmryAppl::eventFilter ( QObject *object, QEvent *event )
 
 void SmryAppl::keyPressEvent ( QKeyEvent *event )
 {
-    if ( event->key() == Qt::Key_Return ) {
+
+    if (( event->key() == Qt::Key_Return ) && (m_smry_loaded)) {
 
         if ( cmd_mode ) {
 
@@ -2341,8 +2358,52 @@ void SmryAppl::keyPressEvent ( QKeyEvent *event )
         }
     }
 
+    else if ( ( event->key() == Qt::Key_O ) && ( event->modifiers() ) && ( Qt::ControlModifier ) ) {
 
-    else if (event->modifiers() && Qt::ControlModifier && event->key() == Qt::Key_R) {
+        QString fileName = QFileDialog::getOpenFileName ( this, tr ( "Open Summary" ),
+                           QDir::currentPath(), tr ( "Summary Files (*.SMSPEC *.ESMRY);;SMSPEC Files (*.SMSPEC);;ESMRY Files (*.ESMRY)" ) );
+
+        if ( fileName.toStdString().size() > 0 ) {
+
+            std::filesystem::path filename(fileName.toStdString());
+            m_smry_files.push_back(filename);
+            std::string ext = filename.extension().string();
+
+            size_t smry_ind = m_file_type.size();
+
+            auto ftime = std::filesystem::last_write_time ( m_smry_files[smry_ind] );
+            file_stamp_vector.push_back ( ftime );
+
+            if (ext == ".SMSPEC") {
+                m_file_type.push_back(FileType::SMSPEC);
+                m_esmry_loader[smry_ind] = std::make_unique<Opm::EclIO::ESmry>(filename);
+                root_name_list.push_back ( m_esmry_loader[smry_ind]->rootname() );
+                vect_list.push_back ( m_esmry_loader[smry_ind]->keywordList() );
+
+            }  else if (ext == ".ESMRY") {
+                m_file_type.push_back(FileType::ESMRY);
+                m_ext_esmry_loader[smry_ind] = std::make_unique<Opm::EclIO::ExtESmry>(filename);
+                root_name_list.push_back ( m_ext_esmry_loader[smry_ind]->rootname() );
+                vect_list.push_back ( m_ext_esmry_loader[smry_ind]->keywordList() );
+            }
+
+            if (!m_smry_loaded) {
+
+                m_smry_loaded = true;
+                lbl_plot->setText("new chart");
+
+                le_commands->setEnabled(1);
+
+                QPalette *palette = new QPalette();
+                palette->setColor ( QPalette::Text,Qt::black );
+                lbl_cmd->setPalette ( *palette );
+            }
+
+
+        }
+    }
+
+    else if ((m_smry_loaded) && ((event->modifiers() && Qt::ControlModifier && event->key() == Qt::Key_R))) {
 
         qInfo() << "<ctrl> + r  --> reset axis range  ";
 
@@ -2356,7 +2417,7 @@ void SmryAppl::keyPressEvent ( QKeyEvent *event )
         }
     }
 
-    else if ( event->key() == Qt::Key_PageDown ) {
+    else if ((m_smry_loaded) &&  ( event->key() == Qt::Key_PageDown )) {
 
         if ( ( chart_ind + 1 ) == chartList.size() ) {
 
@@ -2388,7 +2449,7 @@ void SmryAppl::keyPressEvent ( QKeyEvent *event )
         }
     }
 
-    else if ( event->key() == Qt::Key_PageUp ) {
+    else if ((m_smry_loaded) && ( event->key() == Qt::Key_PageUp )) {
 
         if ( chart_ind > 0 ) {
             chart_ind --;
@@ -2401,13 +2462,13 @@ void SmryAppl::keyPressEvent ( QKeyEvent *event )
         }
     }
 
-    else if (( event->key() == Qt::Key_F )  && ( event->modifiers() ) && ( Qt::ControlModifier )) {
+    else if ((m_smry_loaded) && (( event->key() == Qt::Key_F )  && ( event->modifiers() ) && ( Qt::ControlModifier ))) {
 
         this->export_figure("/project/multiscale/users/tskille/prog/test_data/tjohei.png", 0);
         std::cout << "figure exported\n";
     }
 
-    else if (( event->key() == Qt::Key_W ) && ( event->modifiers() ) && ( Qt::ControlModifier )) {
+    else if ((m_smry_loaded) && (( event->key() == Qt::Key_W ) && ( event->modifiers() ) && ( Qt::ControlModifier ))) {
 
         std::string filt = "*";
 
@@ -2422,8 +2483,7 @@ void SmryAppl::keyPressEvent ( QKeyEvent *event )
         }
     }
 
-
-    else if (( event->key() == Qt::Key_G ) && ( event->modifiers() ) && ( Qt::ControlModifier )) {
+    else if ((m_smry_loaded) && (( event->key() == Qt::Key_G ) && ( event->modifiers() ) && ( Qt::ControlModifier ))) {
 
         std::string filt = "*";
 
@@ -2439,7 +2499,7 @@ void SmryAppl::keyPressEvent ( QKeyEvent *event )
     }
 
 
-    else if (( event->key() == Qt::Key_A ) && ( event->modifiers() ) && ( Qt::ControlModifier )) {
+    else if ((m_smry_loaded) && (( event->key() == Qt::Key_A ) && ( event->modifiers() ) && ( Qt::ControlModifier ))) {
 
         std::string filt = "*";
 
@@ -2454,7 +2514,7 @@ void SmryAppl::keyPressEvent ( QKeyEvent *event )
         }
     }
 
-    else if ( ( event->key() == Qt::Key_P ) && ( event->modifiers() ) && ( Qt::ControlModifier ) ) {
+    else if ((m_smry_loaded) &&  (( event->key() == Qt::Key_P ) && ( event->modifiers() ) && ( Qt::ControlModifier ))) {
 
         QString fileName = QFileDialog::getSaveFileName ( this, tr ( "Save File" ),
                            QDir::currentPath(),
@@ -2463,43 +2523,13 @@ void SmryAppl::keyPressEvent ( QKeyEvent *event )
         this->print_pdf ( fileName );
     }
 
-    else if ( ( event->key() == Qt::Key_O ) && ( event->modifiers() ) && ( Qt::ControlModifier ) ) {
 
-        QString fileName = QFileDialog::getOpenFileName ( this, tr ( "Open Summary" ),
-                           QDir::currentPath(), tr ( "Summary Files (*.SMSPEC *.ESMRY);;SMSPEC Files (*.SMSPEC);;ESMRY Files (*.ESMRY)" ) );
-
-        if ( fileName.toStdString().size() > 0 ) {
-
-            std::filesystem::path filename(fileName.toStdString());
-            m_smry_files.push_back(filename);
-            std::string ext = filename.extension().string();
-
-            size_t smry_ind = m_file_type.size();
-
-            auto ftime = std::filesystem::last_write_time ( m_smry_files[smry_ind] );
-            file_stamp_vector.push_back ( ftime );
-
-            if (ext == ".SMSPEC") {
-                m_file_type.push_back(FileType::SMSPEC);
-                m_esmry_loader[smry_ind] = std::make_unique<Opm::EclIO::ESmry>(filename);
-                root_name_list.push_back ( m_esmry_loader[smry_ind]->rootname() );
-                vect_list.push_back ( m_esmry_loader[smry_ind]->keywordList() );
-
-            }  else if (ext == ".ESMRY") {
-                m_file_type.push_back(FileType::ESMRY);
-                m_ext_esmry_loader[smry_ind] = std::make_unique<Opm::EclIO::ExtESmry>(filename);
-                root_name_list.push_back ( m_ext_esmry_loader[smry_ind]->rootname() );
-                vect_list.push_back ( m_ext_esmry_loader[smry_ind]->keywordList() );
-            }
-        }
-    }
-
-    else if ( ( event->key() == Qt::Key_Delete ) && ( event->modifiers() ) && ( Qt::ControlModifier ) ) {
+    else if ((m_smry_loaded) &&  (( event->key() == Qt::Key_Delete ) && ( event->modifiers() ) && ( Qt::ControlModifier ))) {
 
         this->delete_chart ( chart_ind );
     }
 
-    else if ( event->key() == Qt::Key_Delete ) {
+    else if ((m_smry_loaded) &&  (( event->key() == Qt::Key_Delete ))) {
 
         this->handle_delete_series();
     }

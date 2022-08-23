@@ -597,7 +597,27 @@ int main(int argc, char *argv[])
         nthreads = arg_vect.size();
 
     if (nthreads == 0){
-        std::cout << "\n! Error, at least one summary file needs to be specified on command line \n\n";
+
+        if (plot_all){
+            std::cout << "\nError ! option -a can't be used without specifying one or more summary files on command line \n\n";
+            exit(1);
+        }
+
+        if (smry_vect.size() > 0){
+            std::cout << "\nError ! option -v can't be used without specifying one or more summary files on command line \n\n";
+            exit(1);
+        }
+
+        if (cmd_file.size() > 0){
+            std::cout << "\nError ! option -f can't be used without specifying one or more summary files on command line \n\n";
+            exit(1);
+        }
+
+        nthreads = 1;
+    }
+
+    if ((cmdl_list.size() > 0) && (cmd_file.empty())) {
+        std::cout << "\nError ! option -l must be used together with option -f \n\n";
         exit(1);
     }
 

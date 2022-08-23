@@ -103,6 +103,7 @@ private:
     bool vect_ok;
     bool axis_mode;
     bool ens_mode = false;
+    bool m_smry_loaded = false;
 
     std::string str_var;
     std::string cmd_var;
