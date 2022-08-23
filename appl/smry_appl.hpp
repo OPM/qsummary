@@ -87,8 +87,8 @@ private slots:
 
 private:
 
-    std::unordered_map<int, std::unique_ptr<Opm::EclIO::ESmry>> esmry_loader;
-    std::unordered_map<int, std::unique_ptr<Opm::EclIO::ExtESmry>> ext_esmry_loader;
+    std::unordered_map<int, std::unique_ptr<Opm::EclIO::ESmry>> m_esmry_loader;
+    std::unordered_map<int, std::unique_ptr<Opm::EclIO::ExtESmry>> m_ext_esmry_loader;
 
     std::unique_ptr<DerivedSmry> m_derived_smry;
 
@@ -147,8 +147,8 @@ private:
 
     using vectorEntry = std::tuple<std::string, std::string, std::string>;
 
-    // id, name, unit
-    using SeriesEntry = std::tuple<int, std::string, vectorEntry, std::string>;
+    // id, name, vect_entry, unit, yaxis, is_derived
+    using SeriesEntry = std::tuple<int, std::string, vectorEntry, std::string, int, bool>;
     using ChartEntry = std::vector<SeriesEntry>;
 
     std::vector<ChartEntry> charts_list;

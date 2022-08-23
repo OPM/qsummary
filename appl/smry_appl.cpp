@@ -45,25 +45,25 @@ SmryAppl::SmryAppl(std::vector<std::string> arg_vect, loader_list_type& loaders,
 
         m_smry_files = std::move(std::get<0>(loaders));
         m_file_type = std::move(std::get<1>(loaders));
-        esmry_loader = std::move(std::get<2>(loaders));
-        ext_esmry_loader = std::move(std::get<3>(loaders));
+        m_esmry_loader = std::move(std::get<2>(loaders));
+        m_ext_esmry_loader = std::move(std::get<3>(loaders));
 
         for (size_t smry_ind = 0; smry_ind < m_smry_files.size(); smry_ind++){
             auto ftime = std::filesystem::last_write_time ( m_smry_files[smry_ind] );
             file_stamp_vector.push_back ( ftime );
 
             if (m_file_type[smry_ind] == FileType::SMSPEC) {
-                root_name_list.push_back ( esmry_loader[smry_ind]->rootname() );
-                vect_list.push_back ( esmry_loader[smry_ind]->keywordList() );
+                root_name_list.push_back ( m_esmry_loader[smry_ind]->rootname() );
+                vect_list.push_back ( m_esmry_loader[smry_ind]->keywordList() );
 
-                if ((!esmry_loader[smry_ind]->hasKey("TIMESTEP") && (esmry_loader[smry_ind]->all_steps_available())))
+                if ((!m_esmry_loader[smry_ind]->hasKey("TIMESTEP") && (m_esmry_loader[smry_ind]->all_steps_available())))
                     vect_list.back().push_back("TIMESTEP");
 
             } else if (m_file_type[smry_ind] == FileType::ESMRY) {
-                root_name_list.push_back ( ext_esmry_loader[smry_ind]->rootname() );
-                vect_list.push_back ( ext_esmry_loader[smry_ind]->keywordList() );
+                root_name_list.push_back ( m_ext_esmry_loader[smry_ind]->rootname() );
+                vect_list.push_back ( m_ext_esmry_loader[smry_ind]->keywordList() );
 
-                if ((!ext_esmry_loader[smry_ind]->hasKey("TIMESTEP") && (ext_esmry_loader[smry_ind]->all_steps_available())))
+                if ((!m_ext_esmry_loader[smry_ind]->hasKey("TIMESTEP") && (m_ext_esmry_loader[smry_ind]->all_steps_available())))
                     vect_list.back().push_back("TIMESTEP");
             }
         }
@@ -146,11 +146,11 @@ SmryAppl::SmryAppl(std::vector<std::string> arg_vect, loader_list_type& loaders,
 
     for (size_t n = 0; n < m_file_type.size(); n++){
         if (m_file_type[n] == FileType::SMSPEC){
-            auto elapsed = esmry_loader[n]->get_io_elapsed();
+            auto elapsed = m_esmry_loader[n]->get_io_elapsed();
             total_opening += std::get<0>(elapsed);
             total_loading += std::get<1>(elapsed);
         } else if (m_file_type[n] == FileType::ESMRY){
-            auto elapsed = ext_esmry_loader[n]->get_io_elapsed();
+            auto elapsed = m_ext_esmry_loader[n]->get_io_elapsed();
             total_opening += std::get<0>(elapsed);
             total_loading += std::get<1>(elapsed);
         }
@@ -318,9 +318,9 @@ bool SmryAppl::add_new_series ( int chart_ind, int smry_ind, std::string vect_na
     if ((is_derived) && (smry_ind < 0)){
         timev = m_derived_smry->get(smry_ind, "TIME" );
     } else if (m_file_type[smry_ind] == FileType::SMSPEC)
-        timev = esmry_loader[smry_ind]->get("TIME");
+        timev = m_esmry_loader[smry_ind]->get("TIME");
     else if (m_file_type[smry_ind] == FileType::ESMRY)
-        timev = ext_esmry_loader[smry_ind]->get("TIME");
+        timev = m_ext_esmry_loader[smry_ind]->get("TIME");
 
     std::string smry_unit;
 
@@ -334,9 +334,9 @@ bool SmryAppl::add_new_series ( int chart_ind, int smry_ind, std::string vect_na
             throw std::runtime_error("derived smry vector " + std::to_string(smry_ind) + ":" + vect_name + " not found in m_derived_smry");
 
     } else if (m_file_type[smry_ind] == FileType::SMSPEC){
-        hasVect = esmry_loader[smry_ind]->hasKey(vect_name);
+        hasVect = m_esmry_loader[smry_ind]->hasKey(vect_name);
     } else if (m_file_type[smry_ind] == FileType::ESMRY) {
-        hasVect = ext_esmry_loader[smry_ind]->hasKey(vect_name);
+        hasVect = m_ext_esmry_loader[smry_ind]->hasKey(vect_name);
     }
 
     // well name in Flow and Eclipse (input data file) can be longer than 8 characters
@@ -349,9 +349,9 @@ bool SmryAppl::add_new_series ( int chart_ind, int smry_ind, std::string vect_na
     if ((!hasVect) && (vect_name.substr(0,1) == "W")){
 
         if (m_file_type[smry_ind] == FileType::SMSPEC)
-            hasVect = this->double_check_well_vector(vect_name, esmry_loader[smry_ind]);
+            hasVect = this->double_check_well_vector(vect_name, m_esmry_loader[smry_ind]);
         else if (m_file_type[smry_ind] == FileType::ESMRY)
-            hasVect = this->double_check_well_vector(vect_name, ext_esmry_loader[smry_ind]);
+            hasVect = this->double_check_well_vector(vect_name, m_ext_esmry_loader[smry_ind]);
     }
 
 
@@ -383,14 +383,14 @@ bool SmryAppl::add_new_series ( int chart_ind, int smry_ind, std::string vect_na
             smry_unit = m_derived_smry->get_unit ( smry_ind, vect_name );
 
         } else if (m_file_type[smry_ind] == FileType::SMSPEC){
-            hasVect = esmry_loader[smry_ind]->hasKey(vect_name);
-            datav = esmry_loader[smry_ind]->get ( vect_name );
-            smry_unit = esmry_loader[smry_ind]->get_unit ( vect_name );
+            hasVect = m_esmry_loader[smry_ind]->hasKey(vect_name);
+            datav = m_esmry_loader[smry_ind]->get ( vect_name );
+            smry_unit = m_esmry_loader[smry_ind]->get_unit ( vect_name );
 
         } else if (m_file_type[smry_ind] == FileType::ESMRY){
-            hasVect = ext_esmry_loader[smry_ind]->hasKey(vect_name);
-            datav = ext_esmry_loader[smry_ind]->get ( vect_name );
-            smry_unit = ext_esmry_loader[smry_ind]->get_unit ( vect_name );
+            hasVect = m_ext_esmry_loader[smry_ind]->hasKey(vect_name);
+            datav = m_ext_esmry_loader[smry_ind]->get ( vect_name );
+            smry_unit = m_ext_esmry_loader[smry_ind]->get_unit ( vect_name );
         }
 
         if (!hasVect)
@@ -412,9 +412,9 @@ bool SmryAppl::add_new_series ( int chart_ind, int smry_ind, std::string vect_na
     if (smry_ind < 0){
         startd = m_derived_smry->startdate();
     } else if (m_file_type[smry_ind] == FileType::SMSPEC)
-        startd = esmry_loader[smry_ind]->startdate();
+        startd = m_esmry_loader[smry_ind]->startdate();
     else if (m_file_type[smry_ind] == FileType::ESMRY)
-        startd = ext_esmry_loader[smry_ind]->startdate();
+        startd = m_ext_esmry_loader[smry_ind]->startdate();
 
     std::chrono::milliseconds ms = std::chrono::duration_cast<std::chrono::milliseconds> ( startd.time_since_epoch() );
     std::chrono::seconds s = std::chrono::duration_cast<std::chrono::seconds> ( ms );
@@ -458,7 +458,7 @@ bool SmryAppl::add_new_series ( int chart_ind, int smry_ind, std::string vect_na
 
     vectorEntry ve = make_vector_entry ( vect_name );
 
-    SeriesEntry serie_data = std::make_tuple ( smry_ind, vect_name, ve, smry_unit );
+    SeriesEntry serie_data = std::make_tuple ( smry_ind, vect_name, ve, smry_unit, vaxis_ind, is_derived);
 
     charts_list[chart_ind].push_back ( serie_data );
 
@@ -598,9 +598,9 @@ bool SmryAppl::add_new_series ( int chart_ind, int smry_ind, std::string vect_na
             std::vector<float> wbhp;
 
             if (m_file_type[smry_ind] == FileType::SMSPEC)
-                wbhp = esmry_loader[smry_ind]->get ( wbhp_name );
+                wbhp = m_esmry_loader[smry_ind]->get ( wbhp_name );
             else if (m_file_type[smry_ind] == FileType::ESMRY)
-                wbhp = ext_esmry_loader[smry_ind]->get ( wbhp_name );
+                wbhp = m_ext_esmry_loader[smry_ind]->get ( wbhp_name );
 
             while ( ( n0 < wbhp.size() ) && ( wbhp[n0] == 0.0 ) )
                 n0++;
@@ -709,10 +709,10 @@ bool SmryAppl::add_new_ens_series ( int chart_ind, std::string vect_name, int va
 
     for (size_t n = 0; n < m_file_type.size(); n++){
         if (m_file_type[n] == FileType::SMSPEC){
-            auto elapsed = esmry_loader[n]->get_io_elapsed();
+            auto elapsed = m_esmry_loader[n]->get_io_elapsed();
             before_loading += std::get<1>(elapsed);
         } else if (m_file_type[n] == FileType::ESMRY){
-            auto elapsed = ext_esmry_loader[n]->get_io_elapsed();
+            auto elapsed = m_ext_esmry_loader[n]->get_io_elapsed();
             before_loading += std::get<1>(elapsed);
         }
     }
@@ -739,11 +739,11 @@ bool SmryAppl::add_new_ens_series ( int chart_ind, std::string vect_name, int va
     #pragma omp parallel for
     for (size_t ind = 0; ind < m_file_type.size(); ind ++){
         if (m_file_type[ind] == FileType::SMSPEC){
-            timev[ind] = esmry_loader[ind]->get("TIME");
-            datav[ind] = esmry_loader[ind]->get ( vect_name );
+            timev[ind] = m_esmry_loader[ind]->get("TIME");
+            datav[ind] = m_esmry_loader[ind]->get ( vect_name );
         } else if (m_file_type[ind] == FileType::ESMRY) {
-            timev[ind] = ext_esmry_loader[ind]->get("TIME");
-            datav[ind] = ext_esmry_loader[ind]->get ( vect_name );
+            timev[ind] = m_ext_esmry_loader[ind]->get("TIME");
+            datav[ind] = m_ext_esmry_loader[ind]->get ( vect_name );
         }
     }
 
@@ -756,10 +756,10 @@ bool SmryAppl::add_new_ens_series ( int chart_ind, std::string vect_name, int va
     std::string smry_unit;
 
     if (m_file_type[0] == FileType::SMSPEC)
-        smry_unit = esmry_loader[0]->get_unit ( vect_name );
+        smry_unit = m_esmry_loader[0]->get_unit ( vect_name );
 
     else if (m_file_type[smry_ind] == FileType::ESMRY)
-        smry_unit = ext_esmry_loader[0]->get_unit ( vect_name );
+        smry_unit = m_ext_esmry_loader[0]->get_unit ( vect_name );
 
     if ( vect_name == "TCPU" )
         smry_unit = "SECONDS";
@@ -795,9 +795,9 @@ bool SmryAppl::add_new_ens_series ( int chart_ind, std::string vect_name, int va
         std::chrono::system_clock::time_point startd;
 
         if (m_file_type[ind] == FileType::SMSPEC)
-            startd = esmry_loader[ind]->startdate();
+            startd = m_esmry_loader[ind]->startdate();
         else if (m_file_type[ind] == FileType::ESMRY)
-            startd = ext_esmry_loader[ind]->startdate();
+            startd = m_ext_esmry_loader[ind]->startdate();
 
         std::chrono::milliseconds ms = std::chrono::duration_cast<std::chrono::milliseconds> ( startd.time_since_epoch() );
         std::chrono::seconds s = std::chrono::duration_cast<std::chrono::seconds> ( ms );
@@ -821,7 +821,7 @@ bool SmryAppl::add_new_ens_series ( int chart_ind, std::string vect_name, int va
 
         vectorEntry ve = make_vector_entry ( vect_name );
 
-        SeriesEntry serie_data = std::make_tuple ( ind, vect_name, ve, smry_unit );
+        SeriesEntry serie_data = std::make_tuple ( ind, vect_name, ve, smry_unit, -1, false );
 
         charts_list[chart_ind].push_back ( serie_data );
 
@@ -872,10 +872,10 @@ bool SmryAppl::add_new_ens_series ( int chart_ind, std::string vect_name, int va
 
     for (size_t n = 0; n < m_file_type.size(); n++){
         if (m_file_type[n] == FileType::SMSPEC){
-            auto elapsed = esmry_loader[n]->get_io_elapsed();
+            auto elapsed = m_esmry_loader[n]->get_io_elapsed();
             after_loading += std::get<1>(elapsed);
         } else if (m_file_type[n] == FileType::ESMRY){
-            auto elapsed = ext_esmry_loader[n]->get_io_elapsed();
+            auto elapsed = m_ext_esmry_loader[n]->get_io_elapsed();
             after_loading += std::get<1>(elapsed);
         }
     }
@@ -1129,11 +1129,11 @@ void SmryAppl::reload_and_update_charts()
 
             if (m_file_type[n] == FileType::SMSPEC){
 
-                this->reopen_loader( n, esmry_loader[n], m_smry_files[n] );
+                this->reopen_loader( n, m_esmry_loader[n], m_smry_files[n] );
 
             } else if (m_file_type[n] == FileType::ESMRY){
 
-                this->reopen_loader( n, ext_esmry_loader[n], m_smry_files[n] );
+                this->reopen_loader( n, m_ext_esmry_loader[n], m_smry_files[n] );
             }
 
         } else {
@@ -1145,7 +1145,9 @@ void SmryAppl::reload_and_update_charts()
         }
     }
 
-    std::vector<std::vector<std::tuple<int, std::string>>> series_properties;
+    m_derived_smry->recalc(m_file_type, m_esmry_loader, m_ext_esmry_loader);
+
+    std::vector<std::vector<std::tuple<int, std::string, int, bool>>> series_properties;
 
     for ( int ind = 0; ind < chartList.size(); ind++ ) {
 
@@ -1153,8 +1155,10 @@ void SmryAppl::reload_and_update_charts()
 
         for ( size_t n = 0; n < charts_list[ind].size(); n++ ) {
 
-            std::tuple<int, std::string> props;
-            props = std::make_tuple ( std::get<0> ( charts_list[ind][n] ), std::get<1> ( charts_list[ind][n] ) );
+            std::tuple<int, std::string, int, bool> props;
+            props = std::make_tuple ( std::get<0> ( charts_list[ind][n] ), std::get<1> ( charts_list[ind][n] ),
+                                     std::get<4> ( charts_list[ind][n]), std::get<5> (charts_list[ind][n] ));
+
             series_properties.back().push_back ( props );
         }
     }
@@ -1182,8 +1186,10 @@ void SmryAppl::reload_and_update_charts()
 
             auto smry_ind = std::get<0> ( series_properties[ind][m] );
             auto vect_name = std::get<1> ( series_properties[ind][m] );
+            auto vaxis_ind = std::get<2> ( series_properties[ind][m] );
+            auto is_derived = std::get<3> ( series_properties[ind][m] );
 
-            add_new_series ( ind, smry_ind, vect_name );
+            add_new_series ( ind, smry_ind, vect_name, vaxis_ind, is_derived);
         }
     }
 
@@ -1355,9 +1361,9 @@ void SmryAppl::update_chart_title_and_legend ( int chart_ind )
         if (smry_index < 0)
             title = "Derives Smry";
         else if (m_file_type[smry_index] == FileType::SMSPEC)
-            title = esmry_loader[smry_index]->rootname();
+            title = m_esmry_loader[smry_index]->rootname();
         else if (m_file_type[smry_index] == FileType::ESMRY)
-            title = ext_esmry_loader[smry_index]->rootname();
+            title = m_ext_esmry_loader[smry_index]->rootname();
 
         legende_rootn = false;
     }
@@ -1399,9 +1405,9 @@ void SmryAppl::update_chart_title_and_legend ( int chart_ind )
             if (smry_ind < 0)
                legende_string = "Derived";
             else if (m_file_type[smry_ind] == FileType::SMSPEC)
-               legende_string = esmry_loader[smry_ind]->rootname();
+               legende_string = m_esmry_loader[smry_ind]->rootname();
             else if (m_file_type[smry_ind] == FileType::ESMRY)
-               legende_string = ext_esmry_loader[smry_ind]->rootname();
+               legende_string = m_ext_esmry_loader[smry_ind]->rootname();
 
         }
 
@@ -1502,10 +1508,10 @@ std::vector<std::string> SmryAppl::get_item_list(std::string filt, const std::ve
 
         switch (m_file_type[case_ind]) {
         case FileType::SMSPEC:
-            wlist = esmry_loader[case_ind]->keywordList ( vect_name_list[n] + ":" + filt );
+            wlist = m_esmry_loader[case_ind]->keywordList ( vect_name_list[n] + ":" + filt );
             break;
         case FileType::ESMRY:
-            wlist = ext_esmry_loader[case_ind]->keywordList ( vect_name_list[n] + ":" + filt );
+            wlist = m_ext_esmry_loader[case_ind]->keywordList ( vect_name_list[n] + ":" + filt );
             break;
         default:
           throw std::runtime_error("invalied file type, can't be loaded");
@@ -2475,15 +2481,15 @@ void SmryAppl::keyPressEvent ( QKeyEvent *event )
 
             if (ext == ".SMSPEC") {
                 m_file_type.push_back(FileType::SMSPEC);
-                esmry_loader[smry_ind] = std::make_unique<Opm::EclIO::ESmry>(filename);
-                root_name_list.push_back ( esmry_loader[smry_ind]->rootname() );
-                vect_list.push_back ( esmry_loader[smry_ind]->keywordList() );
+                m_esmry_loader[smry_ind] = std::make_unique<Opm::EclIO::ESmry>(filename);
+                root_name_list.push_back ( m_esmry_loader[smry_ind]->rootname() );
+                vect_list.push_back ( m_esmry_loader[smry_ind]->keywordList() );
 
             }  else if (ext == ".ESMRY") {
                 m_file_type.push_back(FileType::ESMRY);
-                ext_esmry_loader[smry_ind] = std::make_unique<Opm::EclIO::ExtESmry>(filename);
-                root_name_list.push_back ( ext_esmry_loader[smry_ind]->rootname() );
-                vect_list.push_back ( ext_esmry_loader[smry_ind]->keywordList() );
+                m_ext_esmry_loader[smry_ind] = std::make_unique<Opm::EclIO::ExtESmry>(filename);
+                root_name_list.push_back ( m_ext_esmry_loader[smry_ind]->rootname() );
+                vect_list.push_back ( m_ext_esmry_loader[smry_ind]->keywordList() );
             }
         }
     }
@@ -2634,10 +2640,10 @@ void SmryAppl::modifiy_vect_lookup()
 bool SmryAppl::has_smry_vect(int smry_ind, const std::string& keystr)
 {
     if (m_file_type[smry_ind] == FileType::SMSPEC)
-        return esmry_loader[smry_ind]->hasKey ( keystr );
+        return m_esmry_loader[smry_ind]->hasKey ( keystr );
 
     else if (m_file_type[smry_ind] == FileType::ESMRY)
-        return ext_esmry_loader[smry_ind]->hasKey ( keystr );
+        return m_ext_esmry_loader[smry_ind]->hasKey ( keystr );
 
     throw std::runtime_error("unknown file type, can't be loaded");
 
@@ -2648,10 +2654,10 @@ const std::vector<float>& SmryAppl::get_smry_vect(int case_ind, std::string& key
 {
     switch( m_file_type[case_ind] ) {
     case FileType::SMSPEC:
-        return esmry_loader[case_ind]->get(keystr);
+        return m_esmry_loader[case_ind]->get(keystr);
         break;
     case FileType::ESMRY:
-        return ext_esmry_loader[case_ind]->get(keystr);
+        return m_ext_esmry_loader[case_ind]->get(keystr);
         break;
     default:
         throw std::invalid_argument ( "invalid file type" );

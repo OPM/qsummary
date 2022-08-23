@@ -52,6 +52,26 @@ DerivedSmry::DerivedSmry(QsumCMDF cmdfile, const std::vector<FileType>& file_typ
         m_derived_smry_list.push_back(it->first);
 }
 
+void DerivedSmry::recalc(const std::vector<FileType>& file_type,
+                std::unordered_map<int, std::unique_ptr<Opm::EclIO::ESmry>>& esmry_loader,
+                std::unordered_map<int, std::unique_ptr<Opm::EclIO::ExtESmry>>& lodsmry_loader)
+{
+
+    m_smry_data.clear();
+
+    load_smry_data(file_type, esmry_loader, lodsmry_loader);
+
+    make_global_time_vect(file_type, esmry_loader, lodsmry_loader);
+
+    calc_derived_smry(file_type, esmry_loader, lodsmry_loader);
+
+    m_derived_smry_list.clear();
+
+    for (auto it = m_smry_data.begin(); it != m_smry_data.end(); it++)
+        m_derived_smry_list.push_back(it->first);
+}
+
+
 void DerivedSmry::make_define_table(const QsumCMDF::define_vect_type& define_vect)
 {
     for (size_t n = 0; n < define_vect.size(); n ++){
@@ -511,6 +531,9 @@ void DerivedSmry::calc_derived_smry(const std::vector<FileType>& file_type,
                 std::unordered_map<int, std::unique_ptr<Opm::EclIO::ESmry>>& esmry_loader,
                 std::unordered_map<int, std::unique_ptr<Opm::EclIO::ExtESmry>>& lodsmry_loader)
 {
+    //m_smry_data.clear();
+    //m_unit_list.clear();
+
     for (auto& define: m_define_table){
 
         var_type var = std::get<0>(define);
@@ -542,7 +565,6 @@ void DerivedSmry::calc_derived_smry(const std::vector<FileType>& file_type,
 
             int smry_id = std::get<1>(param);
             std::string smry_key = std::get<2>(param);
-
 
             std::vector<float> smry_vect;
 
