@@ -22,6 +22,7 @@ private slots:
     void test_1e();
     void test_1f();
     void test_1g();
+    void test_1h();
 
     void test_2a();
     void test_2b();
@@ -575,6 +576,95 @@ void TestQsummary::test_1g()
     }
 }
 
+void TestQsummary::test_1h()
+{
+    int num_files = 3;
+
+    std::vector<FileType> file_type;
+    file_type.resize(num_files);
+
+    file_type[0] = FileType::SMSPEC;
+    file_type[1] = FileType::ESMRY;
+    file_type[2] = FileType::ESMRY;
+
+    std::unordered_map<int, std::unique_ptr<Opm::EclIO::ESmry>> esmry_loader;
+    std::unordered_map<int, std::unique_ptr<Opm::EclIO::ExtESmry>> lodsmry_loader;
+
+    esmry_loader[0] = std::make_unique<Opm::EclIO::ESmry>("../tests/smry_files/SENS0.SMSPEC");
+    lodsmry_loader[1] = std::make_unique<Opm::EclIO::ExtESmry>("../tests/smry_files/SENS1.ESMRY");
+    lodsmry_loader[2] = std::make_unique<Opm::EclIO::ExtESmry>("../tests/smry_files/SENS2.ESMRY");
+
+    std::vector<var_type> ref_var_vect;
+    std::vector<std::vector<param_type>> ref_params_vect;
+    std::vector<std::string> ref_expr_vect;
+
+    Opm::EclIO::EclFile refFile("../tests/REF_DEFINE.DATA");
+
+    refFile.loadData();
+
+    {
+        std::string cmd_file = "../tests/cmd_files/test1h.txt";
+        QsumCMDF cmdfile(cmd_file, num_files, "");
+
+        SmryAppl::input_list_type input_charts;
+
+        cmdfile.make_charts_from_cmd(input_charts, "");
+
+        std::unique_ptr<DerivedSmry> derived_smry;
+        derived_smry = std::make_unique<DerivedSmry>(cmdfile, file_type, esmry_loader, lodsmry_loader);
+
+        auto test1h = derived_smry->get_table();
+        //derived_smry->print_m_define_table();
+
+        ref_var_vect.resize(3);
+        ref_params_vect.resize(3);
+        ref_expr_vect.resize(3);
+
+        ref_expr_vect[0] = "IF(X1>25.0,X2/X1,0.0)";
+        ref_expr_vect[1] = "IF(X1>25.0,X2/X1,0.0)";
+        ref_expr_vect[2] = "IF(X1>25.0,X2/X1,0.0)";
+
+        ref_var_vect[0] = {0, "FOWR", "None"};
+        ref_var_vect[1] = {1, "FOWR", "None"};
+        ref_var_vect[2] = {2, "FOWR", "None"};
+
+
+        ref_params_vect[0] = { {"X1", 0, "FWPR"},
+                               {"X2", 0, "FOPR"},
+                             };
+
+        ref_params_vect[1] = { {"X1", 1, "FWPR"},
+                               {"X2", 1, "FOPR"},
+                             };
+
+        ref_params_vect[2] = { {"X1", 2, "FWPR"},
+                               {"X2", 2, "FOPR"},
+                             };
+
+        QCOMPARE(check_define(test1h, ref_var_vect, ref_params_vect, ref_expr_vect), true);
+
+        std::vector<std::vector<float>> ref_data;
+        std::vector<std::vector<float>> test_data;
+
+        ref_data.push_back(refFile.get<float>("REF_34"));
+        ref_data.push_back(refFile.get<float>("REF_35"));
+        ref_data.push_back(refFile.get<float>("REF_36"));
+
+        test_data.push_back(derived_smry->get(0, "FOWR"));
+        test_data.push_back(derived_smry->get(1, "FOWR"));
+        test_data.push_back(derived_smry->get(2, "FOWR"));
+
+        QCOMPARE(test_data.size(), ref_data.size());
+
+        for (size_t n = 0; n < test_data.size(); n++){
+            QCOMPARE(test_data[n].size(), ref_data[n].size());
+
+            for (size_t m = 0; m < test_data[n].size(); m++)
+                QCOMPARE(test_data[n][m], ref_data[n][m]);
+        }
+
+    }
+}
 
 void TestQsummary::test_2a()
 {
