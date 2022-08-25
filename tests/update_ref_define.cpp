@@ -140,6 +140,16 @@ int main(int argc, char *argv[])
             add_to_file(refFile, derived_smry, n);
         }
 
+        {
+            std::string cmd_file = "../tests/cmd_files/test1h.txt";
+            QsumCMDF cmdfile(cmd_file, num_files, "");
+
+            std::unique_ptr<DerivedSmry> derived_smry;
+            derived_smry = std::make_unique<DerivedSmry>(cmdfile, file_type, esmry_loader, lodsmry_loader);
+
+            add_to_file(refFile, derived_smry, n);
+        }
+
     }
 
 

@@ -551,7 +551,7 @@ void QsumCMDF::process_cmdlines(const std::string& cmdl_list)
 
     while (lnr <  (m_cmd_lines.size())){
 
-        auto tokens = split(m_cmd_lines[lnr], ", \t");
+        auto tokens = split(m_cmd_lines[lnr], " \t");
 
         if (tokens[0] == "LIST") {
 

@@ -18,6 +18,7 @@ private slots:
    void test_1a();
    void test_1c();
    void test_1f();
+   void test_1h();
    void test_2a();
    void test_2b();
    void test_2c();
@@ -226,6 +227,64 @@ void TestQsummary::test_1f()
         ref_vect_input[2].push_back({2, "WOPR:PROD-3", -1, false});
         ref_vect_input[2].push_back({2, "WXX1:PROD-X", -1, true});
         ref_vect_input[2].push_back({2, "WXX2:PROD-X", -1, true});
+
+        std::vector<SmryAppl::vect_input_type> test_vect_input;
+
+        for (size_t t = 0; t < ref_vect_input.size(); t++){
+            test_vect_input = std::get<0>(input_charts[t]);
+
+            QCOMPARE(test_vect_input.size(), ref_vect_input[t].size());
+
+            for (size_t n = 0; n < test_vect_input.size(); n++)
+                QCOMPARE(test_vect_input[n], ref_vect_input[t][n]);
+
+        }
+    }
+}
+
+void TestQsummary::test_1h()
+{
+    int num_files = 3;
+
+    std::vector<FileType> file_type;
+    file_type.resize(num_files);
+
+    file_type[0] = FileType::SMSPEC;
+    file_type[1] = FileType::ESMRY;
+    file_type[2] = FileType::ESMRY;
+
+    std::unordered_map<int, std::unique_ptr<Opm::EclIO::ESmry>> esmry_loader;
+    std::unordered_map<int, std::unique_ptr<Opm::EclIO::ExtESmry>> lodsmry_loader;
+
+    esmry_loader[0] = std::make_unique<Opm::EclIO::ESmry>("../tests/smry_files/SENS0.SMSPEC");
+    lodsmry_loader[1] = std::make_unique<Opm::EclIO::ExtESmry>("../tests/smry_files/SENS1.ESMRY");
+    lodsmry_loader[2] = std::make_unique<Opm::EclIO::ExtESmry>("../tests/smry_files/SENS2.ESMRY");
+
+    {
+        std::string cmd_file = "../tests/cmd_files/test1h.txt";
+        QsumCMDF cmdfile(cmd_file, num_files, "");
+
+        SmryAppl::input_list_type input_charts;
+
+        cmdfile.make_charts_from_cmd(input_charts, "");
+
+        //print_input_charts(input_charts);
+
+        QCOMPARE(input_charts.size(), 3);
+
+        std::vector<std::vector<SmryAppl::vect_input_type>> ref_vect_input;
+
+        ref_vect_input.push_back({});
+        ref_vect_input[0].push_back({0, "FWPR", -1, false});
+        ref_vect_input[0].push_back({0, "FOWR", -1, true});
+
+        ref_vect_input.push_back({});
+        ref_vect_input[1].push_back({1, "FWPR", -1, false});
+        ref_vect_input[1].push_back({1, "FOWR", -1, true});
+
+        ref_vect_input.push_back({});
+        ref_vect_input[2].push_back({2, "FWPR", -1, false});
+        ref_vect_input[2].push_back({2, "FOWR", -1, true});
 
         std::vector<SmryAppl::vect_input_type> test_vect_input;
 
