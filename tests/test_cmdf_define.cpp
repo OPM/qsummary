@@ -620,9 +620,9 @@ void TestQsummary::test_1h()
         ref_params_vect.resize(3);
         ref_expr_vect.resize(3);
 
-        ref_expr_vect[0] = "IF(X1>25.0,X2/X1,0.0)";
-        ref_expr_vect[1] = "IF(X1>25.0,X2/X1,0.0)";
-        ref_expr_vect[2] = "IF(X1>25.0,X2/X1,0.0)";
+        ref_expr_vect[0] = "IF(X1>25.0,X2/X1,NAN)";
+        ref_expr_vect[1] = "IF(X1>25.0,X2/X1,NAN)";
+        ref_expr_vect[2] = "IF(X1>25.0,X2/X1,NAN)";
 
         ref_var_vect[0] = {0, "FOWR", "None"};
         ref_var_vect[1] = {1, "FOWR", "None"};

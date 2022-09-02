@@ -493,6 +493,29 @@ std::vector<float> DerivedSmry::calc_derived_vect(const std::string& expr,
     return derived_vect;
 }
 
+int DerivedSmry::replace_all(std::string& line, const std::string& repstr1, const std::string& repstr2, const std::string& newstr)
+{
+    int count = 0;
+
+    for (auto& repstr : {
+                repstr1, repstr2
+            }) {
+
+        int p1 = line.find(repstr);
+
+        while ( p1 != std::string::npos ) {
+
+            line.replace(p1, repstr.size(), newstr);
+            count ++;
+
+            p1 = line.find(repstr);
+        }
+    }
+
+    return count;
+}
+
+
 
 void DerivedSmry::calc_math_expr(std::vector<float>& derived_vect, const std::string& expr,
                                  const std::vector<std::string>& param_name_list,
@@ -599,6 +622,7 @@ void DerivedSmry::calc_derived_smry(const std::vector<FileType>& file_type,
             param_data.push_back(smry_vect);
         }
 
+        int ant = replace_all(expr_str, "NaN", "NAN", "0.0/0.0");
         auto derived_vect = calc_derived_vect(expr_str, param_name_list, time_vect, param_time_vect_ind, param_data);
 
         std::tuple<int, std::string> smry_key = std::make_tuple(var_smry_id, var_smry_key);

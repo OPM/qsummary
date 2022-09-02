@@ -79,9 +79,7 @@ private:
 
     std::map<std::tuple<int, std::string>, std::string> m_unit_list;
 
-
     std::vector<define_type> m_define_table;
-
 
     int param_exists(const param_list_type& param_list, int smry_id, const std::string& key);
     void make_define_table(const define_vect_type& define_vect);
@@ -117,6 +115,8 @@ private:
                         const std::vector<std::string>& param_name_list,
                         const std::vector<std::vector<float>>& param_vect);
 
+
+    int replace_all(std::string& line, const std::string& repstr1, const std::string& repstr2, const std::string& newstr);
 
 };
 
