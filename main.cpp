@@ -77,7 +77,7 @@ static void printHelp()
     std::cout << " :yrange [axis] [from_value] [to_value] - update range for value axis for active chart\n";
     std::cout << " :r    reload data and update all charts\n";
     std::cout << " :pdf  create pdf file (open file dialog) \n";
-    std::cout << " :pdf [file_name] create pdf file save til file name. \n";
+    std::cout << " :pdf [file_name] create pdf file save to file name. \n";
     std::cout << " :m   switch markers on or off, all series  \n";
     std::cout << " :e   exit application  \n";
     std::cout << " :ens switch to esemble mode (this part of the code is under construction)  \n";
