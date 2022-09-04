@@ -1161,7 +1161,8 @@ void SmryAppl::reload_and_update_charts()
         }
     }
 
-    m_derived_smry->recalc(m_file_type, m_esmry_loader, m_ext_esmry_loader);
+    if (m_derived_smry != nullptr)
+        m_derived_smry->recalc(m_file_type, m_esmry_loader, m_ext_esmry_loader);
 
     std::vector<std::vector<std::tuple<int, std::string, int, bool>>> series_properties;
 
