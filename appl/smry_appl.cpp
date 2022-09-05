@@ -2283,9 +2283,41 @@ void SmryAppl::keyPressEvent ( QKeyEvent *event )
                 this->add_cmd_to_hist(cmd_var);
                 this->reset_cmdline();
 
-            } else if (  cmd_var == ":test" ) {
+            } else if (( cmd_var.substr ( 0,12 ) == ":ignore zero" ) ||
+                       ( cmd_var.substr ( 0,4 ) == ":i z" )){
 
-                axisX[chart_ind]->print_range();
+                std::vector<std::string> str_tokens = split_string ( cmd_var );
+
+                int from_chart = -1;
+                int to_chart = -1;
+
+                if ( str_tokens.size() > 3 ) {
+
+                    try {
+                        from_chart = std::stoi ( str_tokens[2] );
+                        to_chart = std::stoi ( str_tokens[3] );
+                    } catch ( ... ) {
+                        std::cout << "invalid command, example :ignore zero 2 5 \n";
+                    }
+
+                } else {
+
+                    std::cout << "invalid command, example :ignore zero 2 5 \n";
+                }
+
+                if ((from_chart != -1) && (to_chart >= from_chart)){
+
+                    for (int c = from_chart -1; c < to_chart; c++){
+                        auto min_max_range = axisX[c]->get_xrange();
+                        update_all_yaxis(min_max_range, c, false, true);
+                    }
+
+                } else {
+                    std::cout << "invalid command, example :ignore zero 2 5 \n";
+                }
+
+                this->add_cmd_to_hist(cmd_var);
+                this->reset_cmdline();
 
             } else if ( ( cmd_var == ":ens" ) || ( cmd_var == ":ENS" ) ) {
 
@@ -2777,7 +2809,8 @@ void SmryAppl::print_pdf ( QString& fileName )
     stackedWidget->setCurrentIndex(chart_ind);
 }
 
-void SmryAppl::update_all_yaxis(const std::tuple<double, double>& min_max_range, int c_ind, bool set_full_range)
+void SmryAppl::update_all_yaxis(const std::tuple<double, double>& min_max_range, int c_ind, bool set_full_range,
+                                bool ignore_zero)
 {
 
     for (size_t y = 0; y < axisY[c_ind].size(); y ++) {
@@ -2806,7 +2839,7 @@ void SmryAppl::update_all_yaxis(const std::tuple<double, double>& min_max_range,
                     double xfrom = std::get<0>(min_max_range);
                     double xto = std::get<1>(min_max_range);
 
-                    auto yrange = series[c_ind][e]->get_min_max_value(xfrom, xto);
+                    auto yrange = series[c_ind][e]->get_min_max_value(xfrom, xto, ignore_zero);
 
                     if (std::get<0>(yrange) < min_y)
                         min_y = std::get<0>(yrange);

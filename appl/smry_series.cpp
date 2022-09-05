@@ -154,20 +154,24 @@ void SmrySeries::print_data()
     std::cout << "\nsize: " << data.size() << "\n\n";
 }
 
-std::tuple<double,double> SmrySeries::get_min_max_value(double xfrom, double xto)
+std::tuple<double,double> SmrySeries::get_min_max_value(double xfrom, double xto, bool ignore_zero)
 {
     double min_y = std::numeric_limits<double>::max();
     double max_y = std::numeric_limits<double>::min();
 
     auto data = this->pointsVector();
 
-    for (size_t n = 0; n < data.size(); n++){
-        if ((static_cast<double>(data[n].x()) > xfrom) && (static_cast<double>(data[n].x()) < xto)){
-            if ( static_cast<double>(data[n].y()) < min_y)
-                min_y = static_cast<double>(data[n].y());
+    for (size_t n = 0; n < data.size(); n++) {
+        if ((static_cast<double>(data[n].x()) > xfrom) && (static_cast<double>(data[n].x()) < xto)) {
 
-            if ( data[n].y() > max_y)
-                max_y = static_cast<double>(data[n].y());
+            if ((!ignore_zero) || (static_cast<double>(data[n].y()) != 0.0)) {
+
+                if ( static_cast<double>(data[n].y()) < min_y)
+                    min_y = static_cast<double>(data[n].y());
+
+                if ( data[n].y() > max_y)
+                    max_y = static_cast<double>(data[n].y());
+            }
         }
     }
 
