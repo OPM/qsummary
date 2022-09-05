@@ -175,7 +175,8 @@ private:
 
     bool update_yrange(const std::string& cmd_str);
 
-    void update_all_yaxis(const std::tuple<double, double>& min_max_range, int chart_ind, bool set_full_range);
+    void update_all_yaxis(const std::tuple<double, double>& min_max_range, int chart_ind, bool set_full_range,
+                          bool ignore_zero = false);
 
     void update_chart_title_and_legend(int chart_ind);
     void reload_and_update_charts();

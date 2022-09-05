@@ -40,7 +40,7 @@ public:
     void print_data();
 
     std::tuple<double,double> get_min_max_value() { return std::make_tuple(m_glob_min, m_glob_max); };
-    std::tuple<double,double> get_min_max_value(double xfrom, double xto);
+    std::tuple<double,double> get_min_max_value(double xfrom, double xto, bool ignore_zero = false);
     bool all_values_zero();
     void calcMinAndMax();
 
