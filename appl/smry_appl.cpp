@@ -416,6 +416,8 @@ bool SmryAppl::add_new_series ( int chart_ind, int smry_ind, std::string vect_na
 
     if ( vect_name.substr(0,4) == "WWIP" )
         smry_unit = "SM3/DAY";   // unit missing when smry file genrated by Eclipse
+    else if ( vect_name.substr(0,3) == "WPI" )
+        smry_unit = "SM3/D/B";   // different unit in flow and Eclipse, using Eclipse version
 
     if ( smry_unit.size() > 0 ) {
         int p1 = smry_unit.find_first_not_of ( " " );
