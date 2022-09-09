@@ -312,13 +312,17 @@ void print_input_charts(const SmryAppl::input_list_type& input_charts)
         std::vector<SmryAppl::vect_input_type> vect_input;
         vect_input = std::get<0>(input_charts[c]);
 
+        auto xstr = std::get<1>(input_charts[c]);
+
         for ( size_t i=0; i < vect_input.size(); i++ ) {
             int n = std::get<0> ( vect_input[i] );
             std::string vect_name = std::get<1> ( vect_input[i] );
             bool is_derived = std::get<3> ( vect_input[i] );
 
             std::cout << "smry_ind= " << n << " > vect_name: " << vect_name << "  ";
-            std::cout << std::boolalpha << is_derived << std::endl;
+            std::cout << std::boolalpha << is_derived;
+            std::cout << " | " << xstr ;
+            std::cout << std::endl;
         }
     }
 }
@@ -790,6 +794,8 @@ int main(int argc, char *argv[])
     }
 
     std::cout << std::endl;
+
+    //print_input_charts(input_charts);
 
     loaders = std::make_tuple(smry_files, file_type, std::move(esmry_loader), std::move(lodsmry_loader));
 

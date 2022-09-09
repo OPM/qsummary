@@ -154,16 +154,20 @@ void SmrySeries::print_data()
     std::cout << "\nsize: " << data.size() << "\n\n";
 }
 
+
 std::tuple<double,double> SmrySeries::get_min_max_value(double xfrom, double xto, bool ignore_zero)
 {
+    // xto are from input yyyy-mm-dd. adding 12 hrs to stuff related to daylight time shift and stuff
+
+    xto = xto + 12.0*3600*1000;   // unit is milliseconds
+
     double min_y = std::numeric_limits<double>::max();
     double max_y = std::numeric_limits<double>::min();
 
     auto data = this->pointsVector();
 
     for (size_t n = 0; n < data.size(); n++) {
-        if ((static_cast<double>(data[n].x()) > xfrom) && (static_cast<double>(data[n].x()) < xto)) {
-
+        if ((static_cast<double>(data[n].x()) >= xfrom) && (static_cast<double>(data[n].x()) <= xto)) {
             if ((!ignore_zero) || (static_cast<double>(data[n].y()) != 0.0)) {
 
                 if ( static_cast<double>(data[n].y()) < min_y)
@@ -184,16 +188,49 @@ std::tuple<double,double> SmrySeries::get_min_max_value(double xfrom, double xto
     return std::make_tuple(min_y, max_y);
 }
 
+
+std::tuple<double,double> SmrySeries::get_min_max_value(bool ignore_zero)
+{
+    if (!ignore_zero)
+        return std::make_tuple(m_glob_min, m_glob_max);
+
+    double min_y = std::numeric_limits<double>::max();
+    double max_y = std::numeric_limits<double>::min();
+
+    auto data = this->pointsVector();
+
+    for (size_t n = 0; n < data.size(); n++) {
+        if (static_cast<double>(data[n].y()) != 0.0) {
+
+            if ( static_cast<double>(data[n].y()) < min_y)
+                min_y = static_cast<double>(data[n].y());
+
+            if ( data[n].y() > max_y)
+                max_y = static_cast<double>(data[n].y());
+        }
+    }
+
+    if (abs(min_y) < 1e-100)
+        min_y =0.0;
+
+    if (abs(max_y) < 1e-100)
+        max_y =0.0;
+
+    return std::make_tuple(min_y, max_y);
+}
+
+
+
 void SmrySeries::calcMinAndMax(){
 
     auto data = this->pointsVector();
 
     for (size_t n = 0; n < data.size(); n++) {
 
-        if ( static_cast<double>(data[n].y()) < m_glob_min)
+        if ( static_cast<double>(data[n].y()) <= m_glob_min)
             m_glob_min = static_cast<double>(data[n].y());
 
-        if ( static_cast<double>(data[n].y()) > m_glob_max)
+        if ( static_cast<double>(data[n].y()) >= m_glob_max)
             m_glob_max = static_cast<double>(data[n].y());
     }
 }

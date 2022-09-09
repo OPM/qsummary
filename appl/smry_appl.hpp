@@ -72,9 +72,11 @@ public:
     void export_figure(const std::string& fname, int chart_ind);
 
     QLineEdit* get_cmdline() { return le_commands; };
+    SmryYaxis* get_smry_yaxis(int chart_ind, int axis_ind);
 
     size_t number_of_charts() { return chartList.size(); }
     size_t number_of_series(int chart_ind) { return series[chart_ind].size(); }
+
 
 protected:
 
@@ -175,7 +177,7 @@ private:
 
     bool update_yrange(const std::string& cmd_str);
 
-    void update_all_yaxis(const std::tuple<double, double>& min_max_range, int chart_ind, bool set_full_range,
+    void update_all_yaxis(const std::tuple<double, double>& min_max_range, int chart_ind,
                           bool ignore_zero = false);
 
     void update_chart_title_and_legend(int chart_ind);

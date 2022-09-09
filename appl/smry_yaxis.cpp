@@ -201,7 +201,6 @@ void SmryYaxis::print_axis_range()
     std::cout << "min: " << m_min << " max: " << m_max << std::endl;
 };
 
-
 bool SmryYaxis::set_range(double min_val, double max_val)
 {
     //  this->setRange is calling QValueAxis::setRange
