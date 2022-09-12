@@ -41,6 +41,10 @@ public:
 
     std::tuple<double,double> get_min_max_value() { return std::make_tuple(m_glob_min, m_glob_max); };
     std::tuple<double,double> get_min_max_value(double xfrom, double xto, bool ignore_zero = false);
+    std::tuple<double,double> get_min_max_value(bool ignore_zero);
+
+    //std::tuple<double,double> get_min_max_value(bool ignore_zero);
+
     bool all_values_zero();
     void calcMinAndMax();
 

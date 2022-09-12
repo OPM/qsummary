@@ -270,15 +270,15 @@ void SmryAppl::create_charts_from_input ( const input_list_type& chart_input )
                     std::cout << "!Warning, fail to set x-range for chart index: " << chart_ind << "\n";
                 else {
                     auto min_max_range = axisX[c]->get_xrange();
-                    update_all_yaxis(min_max_range, c, true);
-
+                    //update_all_yaxis(min_max_range, c, true);  // should this be false ?
+                    update_all_yaxis(min_max_range, c);  // should this be false ?
                 }
 
             } else {
 
                 auto min_max_range = axisX[c]->get_xrange();
                 axisX[c]->resetAxisRange();
-                update_all_yaxis(min_max_range, c, true);
+                update_all_yaxis(min_max_range, c);
             }
         }
     }
@@ -1016,7 +1016,6 @@ void SmryAppl::update_xaxis_range ( SmryXaxis* axis )
 
     axis->setMinAndMax ( min_val, max_val );
     axis->resetAxisRange();
-
 }
 
 void SmryAppl::update_axis_range(SmryYaxis* axis){
@@ -1943,6 +1942,7 @@ bool SmryAppl::eventFilter ( QObject *object, QEvent *event )
         }
     }
 
+
     if ( event->type() == QEvent::KeyPress ) {
 
         QKeyEvent *keyEvent = static_cast<QKeyEvent *> ( event );
@@ -1959,10 +1959,15 @@ bool SmryAppl::eventFilter ( QObject *object, QEvent *event )
 
             return true;
 
-        } else if (( keyEvent->key()  == Qt::Key_L ) && ( keyEvent->modifiers() ) && ( Qt::ControlModifier )) {
 
-            this->reload_and_update_charts();
+        } else if (( keyEvent->key()  == Qt::Key_Z ) && ( keyEvent->modifiers() ) && ( Qt::ControlModifier )) {
 
+            std::cout << "<ctrl>+z in event filter \n";
+
+            auto min_max_range = axisX[chart_ind]->get_xrange();
+            update_all_yaxis(min_max_range, chart_ind, true);
+
+            return true;
         }
 
         if ( cmd_mode ) {
@@ -2250,7 +2255,7 @@ void SmryAppl::keyPressEvent ( QKeyEvent *event )
 
                     auto min_max_range = axisX[chart_ind]->get_xrange();
 
-                    update_all_yaxis(min_max_range, chart_ind, false);
+                    update_all_yaxis(min_max_range, chart_ind);
 
                     this->add_cmd_to_hist(cmd_var);
                     this->reset_cmdline();
@@ -2309,12 +2314,24 @@ void SmryAppl::keyPressEvent ( QKeyEvent *event )
 
                     for (int c = from_chart -1; c < to_chart; c++){
                         auto min_max_range = axisX[c]->get_xrange();
-                        update_all_yaxis(min_max_range, c, false, true);
+                        update_all_yaxis(min_max_range, c, true);
                     }
 
                 } else {
                     std::cout << "invalid command, example :ignore zero 2 5 \n";
                 }
+
+                this->add_cmd_to_hist(cmd_var);
+                this->reset_cmdline();
+
+            } else if ( cmd_var == ":test" ) {
+
+                std::cout << "\ntesting \n";
+                axisY[0][0]->print_axis_range();
+
+                std::cout << "axis: min > " << axisY[0][0]->min();
+                std::cout << " axis: max > " << axisY[0][0]->max();
+                std::cout << "\n";
 
                 this->add_cmd_to_hist(cmd_var);
                 this->reset_cmdline();
@@ -2376,7 +2393,7 @@ void SmryAppl::keyPressEvent ( QKeyEvent *event )
                     min_max_range = axisX[chart_ind]->get_xrange();
 
                     axisX[chart_ind]->set_range(std::get<0>(min_max_range), std::get<1>(min_max_range));
-                    update_all_yaxis(min_max_range, chart_ind, true);
+                    update_all_yaxis(min_max_range, chart_ind);
                 }
 
                 le_commands->clear();
@@ -2447,9 +2464,17 @@ void SmryAppl::keyPressEvent ( QKeyEvent *event )
         axisX[chart_ind]->resetAxisRange();
         axisX[chart_ind]->reset_range();
 
-        for ( auto yaxis : axisY[chart_ind] ){
-            yaxis->resetAxisRange();
-        }
+        auto min_max_range = axisX[chart_ind]->get_xrange();
+
+        update_all_yaxis(min_max_range, chart_ind);
+    }
+
+    else if ((m_smry_loaded) && ((event->modifiers() && Qt::ControlModifier && event->key() == Qt::Key_Z))) {
+
+        qInfo() << "<ctrl> + z  --> reset axis range  ";
+
+        auto min_max_range = axisX[chart_ind]->get_xrange();
+        update_all_yaxis(min_max_range, chart_ind, true);
     }
 
     else if ((m_smry_loaded) &&  ( event->key() == Qt::Key_PageDown )) {
@@ -2809,9 +2834,11 @@ void SmryAppl::print_pdf ( QString& fileName )
     stackedWidget->setCurrentIndex(chart_ind);
 }
 
-void SmryAppl::update_all_yaxis(const std::tuple<double, double>& min_max_range, int c_ind, bool set_full_range,
-                                bool ignore_zero)
+
+void SmryAppl::update_all_yaxis(const std::tuple<double, double>& min_max_range, int c_ind, bool ignore_zero)
 {
+
+    const bool full_xrange = !axisX[c_ind]->has_xrange() ? true : false;
 
     for (size_t y = 0; y < axisY[c_ind].size(); y ++) {
 
@@ -2824,8 +2851,10 @@ void SmryAppl::update_all_yaxis(const std::tuple<double, double>& min_max_range,
         for (size_t e = 0; e < series[c_ind].size(); e ++) {
             if (yaxis_map[series[c_ind][e]] == axisY[c_ind][y]) {
 
-                if (set_full_range) {
-                    auto full_yrange = series[chart_ind][e]->get_min_max_value();
+                if (full_xrange) {
+
+                    std::tuple<double,double> full_yrange;
+                    full_yrange = series[chart_ind][e]->get_min_max_value(ignore_zero);
 
                     if (std::get<0>(full_yrange) < f_min_y)
                         f_min_y = std::get<0>(full_yrange);
@@ -2850,7 +2879,7 @@ void SmryAppl::update_all_yaxis(const std::tuple<double, double>& min_max_range,
             }
         }
 
-        if (set_full_range) {
+        if (full_xrange) {
             adjust_yaxis_props(axisY[c_ind][y], f_min_y, f_max_y);
             axisY[c_ind][y]-> setMinAndMax ( f_min_y, f_max_y );
         }
@@ -2859,5 +2888,11 @@ void SmryAppl::update_all_yaxis(const std::tuple<double, double>& min_max_range,
             adjust_yaxis_props(axisY[c_ind][y], min_y, max_y);
         }
     }
+}
+
+
+SmryYaxis* SmryAppl::get_smry_yaxis(int chart_ind, int axis_ind)
+{
+    return axisY[chart_ind][axis_ind];
 }
 
