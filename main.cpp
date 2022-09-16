@@ -84,10 +84,12 @@ static void printHelp()
 
     std::cout << "\ncontrols: \n\n";
 
+    std::cout << " <ctrl> + c  copy visible chart to clipboard  \n";
     std::cout << " <ctrl> + r  reset chart zoom and x and y range  \n";
     std::cout << " <shift> + r  reload data and update all charts  \n";
     std::cout << " <ctrl> + p  create pdf file (open file dialog)  \n";
     std::cout << " <ctrl> + o  open summary file (open file dialog)  \n";
+    std::cout << " <ctrl> + z  rescale value axis, ignore zero  \n";
     std::cout << " <delete>   delete last series active chart  \n";
     std::cout << " <ctrl> + <delete>   delete active chart  \n";
     std::cout << " <page down>   next chart, create new if last chart already active  \n";

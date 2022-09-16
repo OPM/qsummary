@@ -1929,6 +1929,26 @@ void SmryAppl::reset_cmdline()
     lbl_rootn->setText ( QString::fromStdString ( root_name_list[smry_ind] ) );
 }
 
+void SmryAppl::copy_to_clipboard()
+{
+    std::string info = "copied chart " + std::to_string(chart_ind + 1) + " to clipboard";
+    QString qinfo = QString::fromStdString(info);
+
+    qInfo() << qinfo;
+
+    QClipboard *clipboard = QGuiApplication::clipboard();
+/*
+    QRect rect = chart_view_list[chart_ind]->rect();
+    int bw = 10;
+    rect.adjust(bw + 2, bw + 2, -2*bw, -2*bw -1);
+*/
+
+    //QPixmap pixmap = chart_view_list[chart_ind]->grab(rect);
+    QPixmap pixmap = chart_view_list[chart_ind]->grab();
+
+    QImage image = pixmap.toImage();
+    clipboard->setImage(image);
+}
 
 bool SmryAppl::eventFilter ( QObject *object, QEvent *event )
 {
@@ -1962,12 +1982,14 @@ bool SmryAppl::eventFilter ( QObject *object, QEvent *event )
 
         } else if (( keyEvent->key()  == Qt::Key_Z ) && ( keyEvent->modifiers() ) && ( Qt::ControlModifier )) {
 
-            std::cout << "<ctrl>+z in event filter \n";
-
             auto min_max_range = axisX[chart_ind]->get_xrange();
             update_all_yaxis(min_max_range, chart_ind, true);
 
             return true;
+
+        } else if (( keyEvent->key()  == Qt::Key_C ) && ( keyEvent->modifiers() ) && ( Qt::ControlModifier )) {
+
+            this->copy_to_clipboard();
         }
 
         if ( cmd_mode ) {
@@ -2475,6 +2497,11 @@ void SmryAppl::keyPressEvent ( QKeyEvent *event )
 
         auto min_max_range = axisX[chart_ind]->get_xrange();
         update_all_yaxis(min_max_range, chart_ind, true);
+    }
+
+    else if ((m_smry_loaded) && ((event->modifiers() && Qt::ControlModifier && event->key() == Qt::Key_C))) {
+
+        this->copy_to_clipboard();
     }
 
     else if ((m_smry_loaded) &&  ( event->key() == Qt::Key_PageDown )) {
