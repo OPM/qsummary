@@ -226,6 +226,7 @@ private:
     template <typename T>
     bool double_check_well_vector(std::string& vect_name, std::unique_ptr<T>& smry);
 
+    void copy_to_clipboard();
 };
 
 #endif
