@@ -22,21 +22,33 @@
 #include <QtCharts/QChartView>
 #include <QtWidgets/QRubberBand>
 
+#include<appl/xaxis_ticks.hpp>
+
 QT_CHARTS_USE_NAMESPACE
 
 class ChartView : public QChartView
 {
 public:
+
     ChartView(QChart *chart, QWidget *parent = 0);
+
+    void set_xaxis_ticks(const std::vector<std::tuple<std::string, double>>& xaxis_ticks);
+    void update_geometry();
 
 protected:
 
     void keyPressEvent(QKeyEvent *event);
+    void resizeEvent(QResizeEvent *event);
 
 
 private:
     bool m_isTouching;
     QWidget *m_parent;
+
+    QChart *m_chart;
+
+    XaxisTicks *m_xaxis_obj;
+    std::vector<std::tuple<std::string, double>> m_xaxis_ticks;
 };
 
 #endif

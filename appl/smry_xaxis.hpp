@@ -23,27 +23,26 @@
 #include <iostream>
 #include <math.h>
 
+#include <appl/chartview.hpp>
 
 class SmryXaxis: public QtCharts::QDateTimeAxis {
 
 public:
 
-    SmryXaxis(QObject *parent = nullptr);
+    using tick_type = std::vector<std::tuple<std::string, double>>;
 
-    void set_min_value(qreal number);
+    SmryXaxis(ChartView *chart_view, QObject *parent = nullptr);
+
     bool set_range(std::string argstr);
-    bool set_range(double min, double max);
-
-    void setMinAndMax(QDateTime min_val, QDateTime max_val);
-    void setMinAndMax(qreal min_val, qreal max_val);
+    bool has_xrange() { return xrange_set; }
 
     void resetAxisRange();
-    void print_range();
-
-    std::tuple<double, double> get_xrange();
-
     void reset_range();
-    bool has_xrange() {return xrange_set;}
+
+    //bool set_range(double min, double max);
+
+    std::tuple<double, double> get_xrange(bool full_range = false);
+
 
 private slots:
 
@@ -51,35 +50,31 @@ private slots:
 
 private:
 
-    QDateTime next_daylight_transition(const QDateTime& dt);
-    QDateTime prev_daylight_transition(const QDateTime& dt);
-
-    bool round_hour(qint64& ms1, qint64& ms2);
-    bool round_day(qint64& ms1, qint64& ms2);
-    bool round_month(qint64& ms1, qint64& ms2);
-    bool round_year(qint64& ms1, qint64& ms2);
     void print_time_string(qint64 ms);
-    void increment_month(int& y, int& m, int increment);
-    void decrement_month(int& y, int& m, int decrement);
 
-    void split_datetime(QDateTime dt, int& y, int& m, int& d, int& h, int& mi, int& s, int& ms);
-    int adjust_ticks(int& n_tick, int max_intv);
-    int adjust_ticks(int& n_tick, int min_intv, int max_intv);
+    tick_type make_raw_list(int nThick);
+
+    tick_type make_second_list();
+    tick_type make_minute_list();
+    tick_type make_hr_list();
+    tick_type make_day_list();
+    tick_type make_month_list();
+    tick_type make_year_list();
+
+    std::string get_month_string(int ind);
 
     bool get_datetime_from_string(std::string str_arg, QDateTime& dt);
 
+    QDateTime m_dt_min_utc;
+    QDateTime m_dt_max_utc;
+
     bool xrange_set;
-
-    qint64 m_min_attached_series;
-    int n_tick;
-
-    int rcount;
-
-    QDateTime m_min;
-    QDateTime m_max;
 
     QDateTime xrange_from;
     QDateTime xrange_to;
+
+    ChartView *m_chart_view;
+
 };
 
 

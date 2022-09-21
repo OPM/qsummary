@@ -1,3 +1,4 @@
+
 cmake_minimum_required(VERSION 3.0)
 
 project(simple)
@@ -20,6 +21,7 @@ find_package(Qt5 5.12 REQUIRED COMPONENTS Widgets Charts Test REQUIRED)
 add_library(smry_appl
    appl/smry_appl.cpp
    appl/smry_xaxis.cpp
+   appl/xaxis_ticks.cpp
    appl/smry_yaxis.cpp
    appl/smry_series.cpp
    appl/chartview.cpp
