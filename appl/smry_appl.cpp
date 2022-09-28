@@ -277,7 +277,7 @@ void SmryAppl::create_charts_from_input ( const input_list_type& chart_input )
             } else {
 
                 auto min_max_range = axisX[c]->get_xrange();
-                axisX[c]->resetAxisRange();
+                //axisX[c]->resetAxisRange();
                 update_all_yaxis(min_max_range, c);
             }
         }
@@ -424,55 +424,37 @@ bool SmryAppl::add_new_series ( int chart_ind, int smry_ind, std::string vect_na
         smry_unit = smry_unit.substr ( p1 );
     }
 
-
     std::chrono::system_clock::time_point startd; // = esmry_list[smry_ind]->startdate();
+    std::vector<int> start_vect;
+
+    QDate d1;
+    QTime tm1;
 
     if (smry_ind < 0){
         startd = m_derived_smry->startdate();
-    } else if (m_file_type[smry_ind] == FileType::SMSPEC)
+    } else if (m_file_type[smry_ind] == FileType::SMSPEC){
         startd = m_esmry_loader[smry_ind]->startdate();
-    else if (m_file_type[smry_ind] == FileType::ESMRY)
+        start_vect = m_esmry_loader[smry_ind]->start_v();
+
+        int sec = start_vect[5] / 1000000;
+        int millisec = (start_vect[5] % 1000000) / 1000;
+
+        d1.setDate(start_vect[2], start_vect[1], start_vect[0]);
+        tm1.setHMS(start_vect[3], start_vect[4], sec, millisec);
+
+    } else if (m_file_type[smry_ind] == FileType::ESMRY){
+
         startd = m_ext_esmry_loader[smry_ind]->startdate();
+        start_vect = m_ext_esmry_loader[smry_ind]->start_v();
+        d1.setDate(start_vect[2], start_vect[1], start_vect[0]);
+        tm1.setHMS(start_vect[3], start_vect[4], start_vect[5], start_vect[6]);
+    }
 
-    std::chrono::milliseconds ms = std::chrono::duration_cast<std::chrono::milliseconds> ( startd.time_since_epoch() );
-    std::chrono::seconds s = std::chrono::duration_cast<std::chrono::seconds> ( ms );
+    QDateTime dt_start_sim(d1, tm1, Qt::UTC);
 
-    std::time_t t = s.count();
-
-    int fractional_seconds = ms.count() % 1000;
-
-    //std::tm *ltm = localtime(&t);
-    std::tm *ltm = gmtime ( &t );
-
-    QDate d1 {1900 + ltm->tm_year, 1 + ltm->tm_mon, ltm->tm_mday};
-    QTime tm1 { ltm->tm_hour, ltm->tm_min, ltm->tm_sec, fractional_seconds };
-
-    // https://stackoverflow.com/questions/55370667/qt-qdatetime-from-string-with-timezone-and-daylight-saving
-
-    /*
-    // testing stuff
-
-    //QDate d1_test {1900 + 2022, 5, 24};
-    QDate d1_test {1900 + 2022, 12, 24};
-    QTime tm1_test { 12, 0, 0, 0 };
-
-    QDateTime dt_test1;
-
-    dt_test1.setDate ( d1_test );
-    dt_test1.setTime ( tm1_test );
-
-    const QDateTime dt_test2 = QDateTime(dt_test1.date(), dt_test1.time(), Qt::UTC);
-    std::cout <<  "\nshift: " << dt_test1.secsTo(dt_test2) / 3600 << " hrs\n\n";
-
-    exit(1);
-    */
-    QDateTime dt_start_sim;
-
-    //dt_start_sim-
-    //Qt::OffsetFromUTC
-
-    dt_start_sim.setDate ( d1 );
-    dt_start_sim.setTime ( tm1 );
+    //dt_start_sim.setTimeSpec(Qt::UTC);
+    //dt_start_sim.setDate ( d1 );
+    //dt_start_sim.setTime ( tm1 );
 
     vectorEntry ve = make_vector_entry ( vect_name );
 
@@ -641,6 +623,10 @@ bool SmryAppl::add_new_series ( int chart_ind, int smry_ind, std::string vect_na
     qInfo() << " appending series data from raw summary vectors";
     qInfo() << QString::fromStdString(msg_str);
 
+
+    //QString dt_start_qstr = dt_start_sim.toString("yyyy-MM-dd HH:mm:ss.zzz");
+    //std::cout << "\nstart: " << dt_start_qstr.toStdString() << "\n\n";
+
     for ( size_t n = n0; n <  n1 + 1; n++ ) {
 
         if (!isnan(datav[n])) {
@@ -651,6 +637,9 @@ bool SmryAppl::add_new_series ( int chart_ind, int smry_ind, std::string vect_na
             dtime.setTimeSpec(Qt::UTC);      // improves runtime significantly
 
             dtime = dtime.addMSecs(static_cast<qint64>(d_msec));
+
+            //QString dt1_qstr = dtime.toString("yyyy-MM-dd HH:mm:ss.zzz");
+            //std::cout << "serie data time : " << dt1_qstr.toStdString() << std::endl;
 
             series[chart_ind].back()->append ( dtime.toMSecsSinceEpoch(), datav[n] * multiplier );
         }
@@ -676,10 +665,10 @@ bool SmryAppl::add_new_series ( int chart_ind, int smry_ind, std::string vect_na
 
     if ( axisX[chart_ind] == nullptr ) {
 
-        axisX[chart_ind] = new SmryXaxis;
+        axisX[chart_ind] = new SmryXaxis(chart_view_list[chart_ind]);
 
         auto vect_x1 = series[chart_ind].back()->pointsVector();
-        axisX[chart_ind]->set_min_value ( vect_x1[0].x() );
+        //axisX[chart_ind]->set_min_value ( vect_x1[0].x() );
 
         chartList[chart_ind]->addAxis ( axisX[chart_ind], Qt::AlignBottom );
     }
@@ -791,7 +780,7 @@ bool SmryAppl::add_new_ens_series ( int chart_ind, std::string vect_name, int va
     axisY[chart_ind][yaxsis_ind]->add_title ( smry_unit );
     axisY[chart_ind][yaxsis_ind]->view_title();
 
-    axisX[chart_ind] = new SmryXaxis;
+    axisX[chart_ind] = new SmryXaxis(chart_view_list[chart_ind]);
 
     chartList[chart_ind]->addAxis ( axisX[chart_ind], Qt::AlignBottom );
 
@@ -811,11 +800,19 @@ bool SmryAppl::add_new_ens_series ( int chart_ind, std::string vect_name, int va
     for (size_t ind = 0; ind < m_file_type.size(); ind ++){
 
         std::chrono::system_clock::time_point startd;
+        std::vector<int> start_vect;
 
         if (m_file_type[ind] == FileType::SMSPEC)
             startd = m_esmry_loader[ind]->startdate();
-        else if (m_file_type[ind] == FileType::ESMRY)
+        else if (m_file_type[ind] == FileType::ESMRY){
             startd = m_ext_esmry_loader[ind]->startdate();
+            start_vect = m_ext_esmry_loader[ind]->start_v();
+        }
+
+        for (auto& v : start_vect)
+            std::cout << v << std::endl;
+
+        exit(1);
 
         std::chrono::milliseconds ms = std::chrono::duration_cast<std::chrono::milliseconds> ( startd.time_since_epoch() );
         std::chrono::seconds s = std::chrono::duration_cast<std::chrono::seconds> ( ms );
@@ -1014,8 +1011,8 @@ void SmryAppl::update_xaxis_range ( SmryXaxis* axis )
         }
     }
 
-    axis->setMinAndMax ( min_val, max_val );
-    axis->resetAxisRange();
+    //axis->setMinAndMax ( min_val, max_val );
+    //axis->resetAxisRange();
 }
 
 void SmryAppl::update_axis_range(SmryYaxis* axis){
@@ -2417,13 +2414,13 @@ void SmryAppl::keyPressEvent ( QKeyEvent *event )
                     auto min_max_range = axisX[chart_ind]->get_xrange();
 
                     if (std::get<0>(min_max_range) < 0){
-                       axisX[chart_ind]->reset_range();
+                       //axisX[chart_ind]->reset_range();
                        min_max_range = axisX[chart_ind]->get_xrange();
                     }
 
                     min_max_range = axisX[chart_ind]->get_xrange();
 
-                    axisX[chart_ind]->set_range(std::get<0>(min_max_range), std::get<1>(min_max_range));
+                    //axisX[chart_ind]->set_range(std::get<0>(min_max_range), std::get<1>(min_max_range));
                     update_all_yaxis(min_max_range, chart_ind);
                 }
 
@@ -2493,11 +2490,13 @@ void SmryAppl::keyPressEvent ( QKeyEvent *event )
         chartList[chart_ind]->zoomReset();
 
         axisX[chart_ind]->resetAxisRange();
-        axisX[chart_ind]->reset_range();
+
+        axisX[chart_ind]->reset_range();   // ?? needed
 
         auto min_max_range = axisX[chart_ind]->get_xrange();
 
         update_all_yaxis(min_max_range, chart_ind);
+
     }
 
     else if ((m_smry_loaded) && ((event->modifiers() && Qt::ControlModifier && event->key() == Qt::Key_Z))) {
@@ -2878,8 +2877,12 @@ void SmryAppl::print_pdf ( QString& fileName )
 
 void SmryAppl::update_all_yaxis(const std::tuple<double, double>& min_max_range, int c_ind, bool ignore_zero)
 {
-
     const bool full_xrange = !axisX[c_ind]->has_xrange() ? true : false;
+
+    //std::cout << "in SmryAppl::update_all_yaxis(, full_xrange: " << std::boolalpha << full_xrange << "\n";
+    //std::cout << "xrange " << std::get<0>(min_max_range);
+    //std::cout << " -> " << std::get<1>(min_max_range) << "\n";
+
 
     for (size_t y = 0; y < axisY[c_ind].size(); y ++) {
 

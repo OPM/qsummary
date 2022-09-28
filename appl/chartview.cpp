@@ -25,10 +25,13 @@
 
 ChartView::ChartView(QChart *chart, QWidget *parent) :
     QChartView(chart, parent),
+    m_chart(chart),
     m_isTouching(false),
     m_parent(parent)
 {
     setRubberBand(QChartView::RectangleRubberBand);
+
+    m_xaxis_obj = new XaxisTicks(m_chart);
 }
 
 
@@ -59,4 +62,26 @@ void ChartView::keyPressEvent(QKeyEvent *event)
         QApplication::sendEvent(m_parent, event);
         break;
     }
+}
+
+void ChartView::resizeEvent(QResizeEvent *event)
+{
+    if (scene()) {
+         scene()->setSceneRect(QRect(QPoint(0, 0), event->size()));
+         m_chart->resize(event->size());
+    }
+
+    QGraphicsView::resizeEvent(event);
+}
+
+
+void ChartView::set_xaxis_ticks(const std::vector<std::tuple<std::string, double>>& xaxis_ticks)
+{
+    m_xaxis_ticks = xaxis_ticks;
+    m_xaxis_obj->set_xaxis_ticks(xaxis_ticks);
+}
+
+void ChartView::update_geometry()
+{
+    m_xaxis_obj->prepare_update();
 }

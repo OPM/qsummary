@@ -77,6 +77,9 @@ void SmrySeries::onHovered(const QPointF &point, bool state)
 
         QDateTime dt_utc = QDateTime::fromMSecsSinceEpoch(p_closest.x(), Qt::UTC);
 
+        QString qstr = dt_utc.toString("yyyy-MM-dd HH:mm:ss.zzz");
+
+        /*
         int ms = dt_utc.time().msec();
 
         double ms_frac = static_cast<double>(ms) / 1000.0;
@@ -84,10 +87,11 @@ void SmrySeries::onHovered(const QPointF &point, bool state)
 
         dt_utc = dt_utc.addMSecs(ms_correction);
 
-        QString qstr = dt_utc.toString("yyyy-MM-dd HH:mm:ss"); // = dt.toString("yyyy-MM-dd HH:mm:ss");
+        QString qstr = dt_utc.toString("yyyy-MM-dd HH:mm:ss"); 
 
         if (dt_utc.isDaylightTime())
             qstr = qstr + " ( daylight time ) ";
+    */
 
         qreal yval = p_closest.y();
 

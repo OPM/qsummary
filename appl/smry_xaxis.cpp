@@ -27,12 +27,22 @@
 #include <string>
 
 
-SmryXaxis::SmryXaxis(QObject *parent)
-      : QDateTimeAxis(parent)
+SmryXaxis::SmryXaxis(ChartView *chart_view, QObject *parent)
+      : QDateTimeAxis(parent),
+      m_chart_view(chart_view)
 {
-    m_min_attached_series = std::numeric_limits<qint64>::max();
-    n_tick = 5;
-    rcount = 0;
+
+    this->setVisible(false);
+
+    m_dt_min_utc.setTimeSpec(Qt::UTC);
+    m_dt_max_utc.setTimeSpec(Qt::UTC);
+
+    QDateTime xrange_from;
+    xrange_from.setTimeSpec(Qt::UTC);
+
+    QDateTime xrange_to;
+    xrange_to.setTimeSpec(Qt::UTC);
+
     xrange_set = false;
 
     connect(this, &QDateTimeAxis::rangeChanged, this, &SmryXaxis::rangeChanged);
@@ -118,30 +128,10 @@ bool SmryXaxis::get_datetime_from_string(std::string str_arg, QDateTime& dt)
         dt.setTime(t);
     }
 
-
     if (dt.isValid())
         return true;
     else
         return false;
-}
-
-
-bool SmryXaxis::set_range(double min, double max)
-{
-    QDateTime dt1;
-    QDateTime dt2;
-
-    dt1 = QDateTime::fromMSecsSinceEpoch(min);
-    dt2 = QDateTime::fromMSecsSinceEpoch(max);
-
-    this->setRange(dt1, dt2);
-
-    xrange_from = dt1;
-    xrange_to = dt2;
-
-
-    return true;
-
 }
 
 
@@ -159,7 +149,10 @@ bool SmryXaxis::set_range(std::string argstr)
     std::string str_to = argstr.substr(p1 + 1);
 
     QDateTime dt1;
+    dt1.setTimeSpec(Qt::UTC);
+
     QDateTime dt2;
+    dt2.setTimeSpec(Qt::UTC);
 
     if (not get_datetime_from_string(str_from, dt1))
         return false;
@@ -173,7 +166,7 @@ bool SmryXaxis::set_range(std::string argstr)
     xrange_from = dt1;
     xrange_to = dt2;
 
-    this->setRange(xrange_from, xrange_to);
+    this->setRange(dt1, dt2);
     xrange_set = true;
 
     return true;
@@ -189,563 +182,502 @@ void SmryXaxis::print_time_string(qint64 ms)
 
 }
 
-void SmryXaxis::increment_month(int& y, int& m, int increment)
+
+std::string SmryXaxis::get_month_string(int ind)
 {
-    if (increment > 12)
-        throw std::invalid_argument("increment_month not support increment > 12" );
+    std::vector<std::string> month_list;
+    month_list = {"Jan", "Feb", "Mar", "Apr", "May", "Jun", "Jul", "Aug", "Sep", "Oct", "Nov", "Dec"};
 
-    m = m + increment;
+    if ((ind < 0) || (ind > 11))
+        throw std::runtime_error("month index " + std::to_string(ind) + " out of range" );
 
-    if (m > 12) {
-        m = m - 12;
-        y += 1;
-    }
-}
-
-void SmryXaxis::decrement_month(int& y, int& m, int decrement)
-{
-    if (decrement > 12)
-        throw std::invalid_argument("decrement_month not support decrement > 12" );
-
-    m = m - decrement;
-
-    if (m < 1) {
-        m = m + 12 - decrement;
-        y -= 1;
-    }
+    return month_list[ind];
 }
 
 
-void SmryXaxis::set_min_value(qreal number)
+SmryXaxis::tick_type SmryXaxis::make_raw_list(int nThick)
 {
-    qint64 tmp = static_cast<qint64>(number);
+    SmryXaxis::tick_type tick_list;
+    double ms1 = static_cast<double>(m_dt_min_utc.toMSecsSinceEpoch());
+    double ms2 = static_cast<double>(m_dt_max_utc.toMSecsSinceEpoch());
 
-    if (tmp < m_min_attached_series)
-        m_min_attached_series = tmp;
-};
+    double diff_msecs = ms2 - ms1;
 
+    double step_msecs = diff_msecs / nThick;
 
-void SmryXaxis::split_datetime(QDateTime dt, int& y, int& m, int& d, int& h, int& mi, int& s, int& ms)
-{
-    y = dt.date().year();
-    m = dt.date().month();
-    d = dt.date().day();
+    int y1 = m_dt_min_utc.date().year();
+    int m1 = m_dt_min_utc.date().month();
+    int d1 = m_dt_min_utc.date().day();
+    int h1 = m_dt_min_utc.time().hour();
+    int mm1 = m_dt_min_utc.time().minute();
+    int s1 = m_dt_min_utc.time().second();
+    int msec1 = m_dt_min_utc.time().msec();
 
-    h = dt.time().hour();
-    mi = dt.time().minute();
-    s = dt.time().second();
-    ms = dt.time().msec();
-}
+    QDate d;
+    d.setDate(y1, m1, d1);
 
+    QDateTime dt;
 
-int SmryXaxis::adjust_ticks(int& n_tick, int min_intv, int max_intv)
-{
-    int n = max_intv;
+    dt.setDate(d);
 
-    while (n >= min_intv){
-        if ((n_tick % n) == 0){
-            n_tick = n;
-            return 0;
+    dt.setTime({ h1, mm1, s1, msec1 });
+    dt.setTimeSpec(Qt::UTC);
+    dt = dt.addMSecs(step_msecs);
+
+    int n = 0;
+
+    while (dt < m_dt_max_utc){
+
+        double frac = (static_cast<double>(dt.toMSecsSinceEpoch()) - ms1) / ( ms2 - ms1);
+        int ms = dt.time().msec();
+        int s = dt.time().second();
+        int mi = dt.time().minute();
+        int h = dt.time().hour();
+        int d = dt.date().day();
+        int m = dt.date().month() - 1;
+        int y = dt.date().year();
+
+        std::ostringstream str;
+        str << std::setw(2) << std::setfill('0') << d << " " << get_month_string(m) << " " << y;
+        str << " " << std::setw(2) << std::setfill('0') << h << ":";
+        str << std::setw(2) << std::setfill('0') << mi << ":";
+        str << std::setw(2) << std::setfill('0') << s;
+        str << "." << std::setw(3) << std::setfill('0') << ms;
+
+        std::string lbl_str = str.str();
+
+        tick_list.push_back( {lbl_str, frac});
+        dt = dt.addMSecs(step_msecs);
+
+        n++;
+        if (n > 100){
+            std::cout << "n > 100 , ups \n";
+            std::cout << "step_msecs: " << step_msecs << "\n\n";
+            exit(1);
         }
-
-        n--;
     }
 
-
-    auto intv = std::div(n_tick, max_intv);
-
-
-    if (intv.rem > 0)
-        intv.quot += 1;
-
-    int step = intv.quot;
-
-    intv = std::div(n_tick, step);
-
-    n_tick = intv.quot;
-
-    if (intv.rem > 0)
-        n_tick++;
-
-    return step - intv.rem;
+    return tick_list;
 }
 
-int SmryXaxis::adjust_ticks(int& n_tick, int max_intv)
+SmryXaxis::tick_type SmryXaxis::make_second_list()
 {
-    auto intv = std::div(n_tick, max_intv);
+    SmryXaxis::tick_type tick_list;
 
-    if (intv.rem > 0)
-        intv.quot += 1;
+    double ms1 = static_cast<double>(m_dt_min_utc.toMSecsSinceEpoch());
+    double ms2 = static_cast<double>(m_dt_max_utc.toMSecsSinceEpoch());
 
-    int step = intv.quot;
+    double diff_hrs = (ms2 - ms1) / (1000*3600);
+    double diff_second = (ms2 - ms1) / 1000;
 
-    intv = std::div(n_tick, step);
+    int y1 = m_dt_min_utc.date().year();
+    int m1 = m_dt_min_utc.date().month();
+    int d1 = m_dt_min_utc.date().day();
+    int h1 = m_dt_min_utc.time().hour();
+    int mi1 = m_dt_min_utc.time().minute();
+    int s1 = m_dt_min_utc.time().second();
 
-    n_tick = intv.quot;
+    int step_seconds;
 
-    if (intv.rem > 0)
-        n_tick++;
-
-    return step - intv.rem;
-}
-
-
-bool SmryXaxis::round_year(qint64& ms1, qint64& ms2)
-{
-    QDateTime dt1 = QDateTime::fromMSecsSinceEpoch(ms1);
-    QDateTime dt2 = QDateTime::fromMSecsSinceEpoch(ms2);
-
-    int shift_d = 2;
-    int min_intv = 6;
-    int max_intv = 18;
-
-    int y1, m1, d1, h1, mi1, s1, mis1;
-    int y2, m2, d2, h2, mi2, s2, mis2;
-
-    split_datetime(dt1, y1, m1, d1, h1, mi1, s1, mis1);
-    split_datetime(dt2, y2, m2, d2, h2, mi2, s2, mis2);
-
-    if ((m1==1) && (d1==1) && (mi1 == 0) && (s1 == 0))
-        d1 = shift_d;
-
-    if ((m2==1) && (d2==1) && (mi2 == 0) && (s2 == 0))
-        d2 = shift_d;
-
-    bool ticks_ok = ((y2-y1) % n_tick) > 0 ? false : true;
-
-    qInfo() << "Round years, number of thicks  " << ticks_ok << ", count: " << rcount;
-
-    if ((m1==1) && (d1 == shift_d) && (h1 == 0) && (mi1 == 0) && (s1 == 0) && (mis1 == 0) &&
-          (m2==1) && (d2 == shift_d) && (h2 == 0) && (mi2 == 0) && (s2 == 0) && (mis2 == 0) && ticks_ok) {
-
-        rcount = 0;
-
-        return false;
-
+    if (diff_second > 90){
+        step_seconds = 30;
+        s1 = std::floor(s1/30)*30;
+    } else if (diff_second > 45){
+        step_seconds = 15;
+        s1 = std::floor(s1/15)*15;
+    } else if (diff_second > 30){
+        step_seconds = 10;
+        s1 = std::floor(s1/10)*10;
+    } else if (diff_second > 15){
+        step_seconds = 5;
+        s1 = std::floor(s1/5)*5;
+    } else if (diff_second > 2){
+        step_seconds = 1;
+        s1 = std::floor(s1/1)*1;
     } else {
-
-        rcount++;
-
-        if (rcount > 10)
-            qFatal("not able to round axis, number of attempts > 10, ");
-
-        dt1 = QDateTime(QDate(y1,1,shift_d), QTime(0,0,0,0));
-
-        if ((m1==1) &&  (d1 == 1) && (mi1 == 0) ){
-            y1 -= 1;
-            dt1 = QDateTime(QDate(y1,1,shift_d), QTime(0,0,0,0));
-        }
-
-        if ((m2 != 1) || (d2 != shift_d)  || (mi2 != 0))
-            y2++;
-
-        n_tick = y2 - y1;
-
-        if (n_tick > max_intv) {
-            y2 = y2 + adjust_ticks(n_tick, min_intv, max_intv);
-        }
-
-        dt2 = QDateTime(QDate(y2, 1, shift_d), QTime(0,0,0,0));
-
-        ms1 = dt1.toMSecsSinceEpoch();
-        ms2 = dt2.toMSecsSinceEpoch();
-
-        return true;
+        std::cout << " less that 2 seconds in make second list, should not be here\n";
+        exit(1);
     }
+
+    QDate d;
+    d.setDate(y1, m1, d1);
+
+    QDateTime dt;
+
+    dt.setDate(d);
+
+    dt.setTime({ h1, mi1, s1, 0 });
+    dt.setTimeSpec(Qt::UTC);
+    dt = dt.addSecs(step_seconds);
+
+    while (dt < m_dt_max_utc){
+
+        double frac = (static_cast<double>(dt.toMSecsSinceEpoch()) - ms1) / ( ms2 - ms1);
+        int s = dt.time().second();
+        int mi = dt.time().minute();
+        int h = dt.time().hour();
+        int d = dt.date().day();
+        int m = dt.date().month() - 1;
+        int y = dt.date().year();
+
+        std::ostringstream str;
+        str << std::setw(2) << std::setfill('0') << d << " " << get_month_string(m) << " " << y;
+        str << " " << std::setw(2) << std::setfill('0') << h << ":";
+        str << std::setw(2) << std::setfill('0') << mi << ":";
+        str << std::setw(2) << std::setfill('0') << s;
+
+        std::string lbl_str = str.str();
+
+        tick_list.push_back( {lbl_str, frac});
+        dt = dt.addSecs(step_seconds);
+    }
+
+    return tick_list;
 }
 
 
-bool SmryXaxis::round_month(qint64& ms1, qint64& ms2)
+SmryXaxis::tick_type SmryXaxis::make_minute_list()
 {
-    QDateTime dt1 = QDateTime::fromMSecsSinceEpoch(ms1);
-    QDateTime dt2 = QDateTime::fromMSecsSinceEpoch(ms2);
+    SmryXaxis::tick_type tick_list;
 
-    int shift_d = 3;
+    double ms1 = static_cast<double>(m_dt_min_utc.toMSecsSinceEpoch());
+    double ms2 = static_cast<double>(m_dt_max_utc.toMSecsSinceEpoch());
 
-    int min_intv = 6;
-    int max_intv = 11;
+    double diff_hrs = (ms2 - ms1) / (1000*3600);
+    double diff_minute = (ms2 - ms1) / (1000*60);
 
-    int y1, m1, d1, h1, mi1, s1, mis1;
-    int y2, m2, d2, h2, mi2, s2, mis2;
+    int y1 = m_dt_min_utc.date().year();
+    int m1 = m_dt_min_utc.date().month();
+    int d1 = m_dt_min_utc.date().day();
+    int h1 = m_dt_min_utc.time().hour();
+    int mi1 = m_dt_min_utc.time().minute();
 
-    split_datetime(dt1, y1, m1, d1, h1, mi1, s1, mis1);
-    split_datetime(dt2, y2, m2, d2, h2, mi2, s2, mis2);
+    int step_minutes;
 
-    if ((m1==1) && (d1==1) && (mi1 == 0) && (s1 == 0) && (mis1 == 0))
-        d1 = shift_d;
-
-    if ((m2==1) && (d2==1) && (mi2 == 0) && (s2 == 0) && (mis2 == 0))
-        d2 = shift_d;
-
-    qInfo() << "Round month, count: " << rcount;
-
-    if ((d1 == shift_d) && (h1 == 0) && (mi1 == 0) && (s1 == 0) && (mis1 == 0) &&
-          (d2 == shift_d) && (h2 == 0) && (mi2 == 0) && (s2 == 0) && (mis2 == 0)) {
-
-        rcount = 0;
-
-        return false;
-
+    if (diff_minute > 90){
+        step_minutes = 30;
+        mi1 = std::floor(mi1/30)*30;
+    } else if (diff_minute > 45){
+        step_minutes = 15;
+        mi1 = std::floor(mi1/15)*15;
+    } else if (diff_minute > 30){
+        step_minutes = 10;
+        mi1 = std::floor(mi1/10)*10;
+    } else if (diff_minute > 15){
+        step_minutes = 5;
+        mi1 = std::floor(mi1/5)*5;
+    } else if (diff_minute > 2){
+        step_minutes = 1;
+        mi1 = std::floor(mi1/1)*1;
     } else {
-
-        rcount++;
-
-        if (rcount > 10)
-            qFatal("not able to round axis, number of attempts > 10, ");
-
-        dt1 = QDateTime(QDate(y1, m1, shift_d), QTime(0,0,0,0));
-
-        if (dt1.toMSecsSinceEpoch() > m_min_attached_series){
-            decrement_month(y1, m1, 1);
-            dt1 = QDateTime(QDate(y1, m1, shift_d), QTime(0,0,0,0));
-        }
-
-        increment_month(y2, m2, 1);
-
-        n_tick = (y2 - y1) * 12 + m2 - m1;
-
-        if (n_tick > max_intv) {
-            int add_month = adjust_ticks(n_tick, min_intv, max_intv);
-            increment_month(y2, m2, add_month);
-        }
-
-        dt2 = QDateTime(QDate(y2, m2, shift_d), QTime(0,0,0,0));
-
-        ms1 = dt1.toMSecsSinceEpoch();
-        ms2 = dt2.toMSecsSinceEpoch();
-
-        return true;
+        std::cout << " less than 2 minutes in make minute list, should not be here.\n";
+        exit(1);
     }
-}
 
+    QDate d;
+    d.setDate(y1, m1, d1);
 
-bool SmryXaxis::round_day(qint64& ms1, qint64& ms2)
-{
-    QDateTime dt1 = QDateTime::fromMSecsSinceEpoch(ms1);
-    QDateTime dt2 = QDateTime::fromMSecsSinceEpoch(ms2);
+    QDateTime dt;
 
-    int min_intv = 5;
-    int max_intv = 8;
+    dt.setDate(d);
 
-    int y1, m1, d1, h1, mi1, s1, mis1;
-    int y2, m2, d2, h2, mi2, s2, mis2;
+    dt.setTime({ h1, mi1, 0, 0 });
+    dt.setTimeSpec(Qt::UTC);
+    dt = dt.addSecs(step_minutes*60);
 
-    split_datetime(dt1, y1, m1, d1, h1, mi1, s1, mis1);
-    split_datetime(dt2, y2, m2, d2, h2, mi2, s2, mis2);
+    while (dt < m_dt_max_utc){
 
-    int h1_rounded = dt1.isDaylightTime() ? 1 : 0;
-    int h2_rounded = dt2.isDaylightTime() ? 1 : 0;
+        double frac = (static_cast<double>(dt.toMSecsSinceEpoch()) - ms1) / ( ms2 - ms1);
+        int mi = dt.time().minute();
+        int h = dt.time().hour();
+        int d = dt.date().day();
+        int m = dt.date().month() - 1;
+        int y = dt.date().year();
 
-    bool ticks_ok = (((ms2-ms1)/(3600000*24)) % n_tick) > 0 ? false : true;
+        std::ostringstream str;
+        str << std::setw(2) << std::setfill('0') << d << " " << get_month_string(m) << " " << y;
+        str << " " << std::setw(2) << std::setfill('0') << h << ":";
+        str << std::setw(2) << std::setfill('0') << mi;
 
-    qInfo() << "Round day: number of thicks  " << ticks_ok << ", count: " << rcount;
+        std::string lbl_str = str.str();
 
-    if ( (h1 == h1_rounded) && (mi1 == 0) && (s1 == 0) &&
-          (h2 == h2_rounded) && (mi2 == 0) && (s2 == 0) && ticks_ok ) {
-
-        rcount = 0;
-
-        return false;
-
-    } else {
-
-        rcount++;
-
-        if (rcount > 10)
-            qFatal("not able to round axis, number of attempts > 10, ");
-
-        dt1 = QDateTime(QDate(y1, m1, d1), QTime(0,0,0,0));
-
-        if (dt1.isDaylightTime())
-            dt1 = QDateTime(QDate(y1, m1, d1), QTime(1,0,0,0));
-
-        dt2 = QDateTime(QDate(y2, m2, d2), QTime(0,0,0,0));
-
-        if ((h2 != h2_rounded) || (mi2 > 0) || (s2 > 0)) {
-            dt2 = dt2.addDays(1.0);
-            split_datetime(dt2, y2, m2, d2, h2, mi2, s2, mis2);
-        }
-
-        if (dt2.isDaylightTime())
-            dt2 = QDateTime(QDate(y2, m2, d2), QTime(1,0,0,0));
-
-        ms1 = dt1.toMSecsSinceEpoch();
-        ms2 = dt2.toMSecsSinceEpoch();
-
-        float f_days = static_cast<float>(ms2 - ms1);
-        f_days = f_days / (1000.0 * 3600.0 * 24.0);
-
-        auto s1 = dt1.toSecsSinceEpoch();
-        auto s2 = dt2.toSecsSinceEpoch();
-
-        auto ndays = (s2 - s1) / (3600*24);
-
-        n_tick = static_cast<int>(ndays);
-
-        if (n_tick > max_intv) {
-            int add_days = adjust_ticks(n_tick, min_intv, max_intv);
-            ms2 += add_days*24*60*60*1000;
-        }
-
-        return true;
+        tick_list.push_back( {lbl_str, frac});
+        dt = dt.addSecs(step_minutes*60);
     }
+
+    return tick_list;
 }
 
-
-QDateTime SmryXaxis::next_daylight_transition(const QDateTime& dt)
+SmryXaxis::tick_type SmryXaxis::make_hr_list()
 {
-    QTimeZone tzone = dt.timeZone();
+    SmryXaxis::tick_type tick_list;
 
-    QTimeZone::OffsetData  tz_next_offset_data = tzone.nextTransition(dt);
+    double ms1 = static_cast<double>(m_dt_min_utc.toMSecsSinceEpoch());
+    double ms2 = static_cast<double>(m_dt_max_utc.toMSecsSinceEpoch());
 
-    QDateTime next_trans_dt = tz_next_offset_data.atUtc;
-    next_trans_dt = next_trans_dt.addSecs(tz_next_offset_data.offsetFromUtc);
+    double diff_hrs = (ms2 - ms1) / (1000*3600);
 
-    return next_trans_dt;
-}
+    int y1 = m_dt_min_utc.date().year();
+    int m1 = m_dt_min_utc.date().month();
+    int d1 = m_dt_min_utc.date().day();
+    int h1 = m_dt_min_utc.time().hour();
 
+    QDate d;
+    d.setDate(y1, m1, d1);
 
-QDateTime SmryXaxis::prev_daylight_transition(const QDateTime& dt)
-{
-    QTimeZone tzone = dt.timeZone();
+    QDateTime dt;
 
-    QTimeZone::OffsetData  tz_prev_offset_data = tzone.previousTransition(dt);
+    dt.setDate(d);
 
-    QDateTime prev_trans_dt = tz_prev_offset_data.atUtc;
-    prev_trans_dt = prev_trans_dt.addSecs(tz_prev_offset_data.offsetFromUtc);
+    dt.setTime({ h1, 0, 0, 0 });
+    dt.setTimeSpec(Qt::UTC);
+    dt = dt.addSecs(3600);
 
-    return prev_trans_dt;
-}
+    while (dt < m_dt_max_utc){
 
+        double frac = (static_cast<double>(dt.toMSecsSinceEpoch()) - ms1) / ( ms2 - ms1);
+        int h = dt.time().hour();
+        int d = dt.date().day();
+        int m = dt.date().month() - 1;
+        int y = dt.date().year();
 
-bool SmryXaxis::round_hour(qint64& ms1, qint64& ms2)
-{
-    QDateTime dt1 = QDateTime::fromMSecsSinceEpoch(ms1);
-    QDateTime dt2 = QDateTime::fromMSecsSinceEpoch(ms2);
+        std::ostringstream str;
+        str << std::setw(2) << std::setfill('0') << d << " " << get_month_string(m) << " " << y;
+        str << " " << std::setw(2) << std::setfill('0') << h << ":00";
 
-    int min_intv = 5;
-    int max_intv = 8;
+        std::string lbl_str = str.str();
 
-    int y1, m1, d1, h1, mi1, s1, mis1;
-    int y2, m2, d2, h2, mi2, s2, mis2;
-
-    split_datetime(dt1, y1, m1, d1, h1, mi1, s1, mis1);
-    split_datetime(dt2, y2, m2, d2, h2, mi2, s2, mis2);
-
-    bool ticks_ok = (((ms2-ms1)/3600000) % n_tick) > 0 ? false : true;
-
-    qInfo() << "Round hours, number of thicks  " << ticks_ok << ", count: " << rcount;
-
-    if ( (mi1 == 0) && (s1 == 0)  &&
-          (mi2 == 0) && (s2 == 0)  && (ticks_ok) ) {
-
-        rcount = 0;
-
-        return false;
-
-    } else {
-
-        rcount++;
-
-        if (rcount > 10)
-            qFatal("not able to round axis, number of attempts > 10, ");
-
-        dt1 = QDateTime(QDate(y1, m1, d1), QTime(h1,0,0,0));
-
-        bool add_day = false;
-
-        if (mi2 > 0){
-            h2++;
-
-            if (h2 == 24){
-                h2 = 0;
-                add_day = true;
-            }
-        }
-
-        dt2 = QDateTime(QDate(y2, m2, d2), QTime(h2,0,0,0));
-
-        if (add_day)
-            dt2 = dt2.addDays(1);
-
-        ms1 = dt1.toMSecsSinceEpoch();
-        ms2 = dt2.toMSecsSinceEpoch();
-
-        qint64 s1 = round(ms1 / 1000.0);
-        qint64 s2 = round(ms2 / 1000.0);
-
-        qint64 nhours = round(s2-s1) / 3600.0;
-
-        n_tick = static_cast<int>(nhours);
-
-        if (n_tick > max_intv) {
-            int add_hrs = adjust_ticks(n_tick, min_intv, max_intv);
-            ms2 += add_hrs*3600000;
-            s2 += add_hrs*3600;
-        }
-
-        nhours = round((s2 - s1) / 3600);
-
-        return true;
+        tick_list.push_back( {lbl_str, frac});
+        dt = dt.addSecs(3600);
     }
+
+    return tick_list;
 }
 
+
+SmryXaxis::tick_type SmryXaxis::make_day_list()
+{
+    SmryXaxis::tick_type tick_list;
+
+    double ms1 = static_cast<double>(m_dt_min_utc.toMSecsSinceEpoch());
+    double ms2 = static_cast<double>(m_dt_max_utc.toMSecsSinceEpoch());
+
+    int y1 = m_dt_min_utc.date().year();
+    int m1 = m_dt_min_utc.date().month();
+    int d1 = m_dt_min_utc.date().day();
+
+    QDate d;
+    d.setDate(y1, m1, d1);
+
+    QDateTime dt;
+
+    dt.setDate(d);
+
+    dt.setTime({ 0, 0, 0, 0 });
+    dt.setTimeSpec(Qt::UTC);
+    dt = dt.addDays(1);
+
+    while (dt < m_dt_max_utc){
+
+        double frac = (static_cast<double>(dt.toMSecsSinceEpoch()) - ms1) / ( ms2 - ms1);
+        int d = dt.date().day();
+        int m = dt.date().month() - 1;
+        int y = dt.date().year();
+
+        std::ostringstream str;
+        str << std::setw(2) << std::setfill('0') << d << " " << get_month_string(m) << " " << y;
+
+        std::string lbl_str = str.str();
+
+        tick_list.push_back( {lbl_str, frac});
+        dt = dt.addDays(1);
+    }
+
+    return tick_list;
+}
+
+
+SmryXaxis::tick_type SmryXaxis::make_month_list()
+{
+    SmryXaxis::tick_type tick_list;
+
+    double ms1 = static_cast<double>(m_dt_min_utc.toMSecsSinceEpoch());
+    double ms2 = static_cast<double>(m_dt_max_utc.toMSecsSinceEpoch());
+
+    int y1 = m_dt_min_utc.date().year();
+    int m1 = m_dt_min_utc.date().month();
+
+    QDate d;
+
+    if (m1 == 12)
+       d.setDate(y1+1, 1, 1);
+    else
+       d.setDate(y1, m1 + 1, 1);
+
+    QDateTime dt;
+
+    dt.setDate(d);
+    dt.setTime({ 0, 0, 0, 0 });
+    dt.setTimeSpec(Qt::UTC);
+
+    while (dt < m_dt_max_utc){
+
+        double frac = (static_cast<double>(dt.toMSecsSinceEpoch()) - ms1) / ( ms2 - ms1);
+        int m = dt.date().month() - 1;
+        int y = dt.date().year();
+        std::string lbl_str = get_month_string(m) + " " + std::to_string(y);
+        tick_list.push_back( {lbl_str, frac});
+        dt = dt.addMonths(1);
+    }
+
+    return tick_list;
+}
+
+SmryXaxis::tick_type SmryXaxis::make_year_list()
+{
+    SmryXaxis::tick_type tick_list;
+
+    double ms1 = static_cast<double>(m_dt_min_utc.toMSecsSinceEpoch());
+    double ms2 = static_cast<double>(m_dt_max_utc.toMSecsSinceEpoch());
+
+    int y1 = m_dt_min_utc.date().year();
+
+    QDate d;
+    d.setDate(y1+1, 1, 1);
+
+    QDateTime dt;
+
+    dt.setDate(d);
+    dt.setTime({ 0, 0, 0, 0 });
+    dt.setTimeSpec(Qt::UTC);
+
+    while (dt < m_dt_max_utc){
+
+        double frac = (static_cast<double>(dt.toMSecsSinceEpoch()) - ms1) / ( ms2 - ms1);
+        int y = dt.date().year();
+        std::string lbl_str = std::to_string(y);
+        tick_list.push_back( {lbl_str, frac});
+        dt = dt.addYears(1);
+    }
+
+    return tick_list;
+}
 
 void SmryXaxis::rangeChanged(QDateTime min, QDateTime max)
 {
-    qint64 ms1 = min.toMSecsSinceEpoch();
-    qint64 ms2 = max.toMSecsSinceEpoch();
+    qint64 ms_min = min.toMSecsSinceEpoch();
+    qint64 ms_max = max.toMSecsSinceEpoch();
 
-    QDateTime dt1 = QDateTime::fromMSecsSinceEpoch(ms1);
-    QDateTime dt2 = QDateTime::fromMSecsSinceEpoch(ms2);
+    m_dt_min_utc.setDate({1970, 1, 1});
+    m_dt_min_utc.setTime({0, 0, 0});
+    m_dt_min_utc = m_dt_min_utc.addMSecs(static_cast<qint64>(ms_min));
 
-    QString dt1_qstr = dt1.toString("yyyy-MM-dd HH:mm:ss.zzz");
-    QString dt2_qstr = dt2.toString("yyyy-MM-dd HH:mm:ss.zzz");
+    m_dt_max_utc.setDate({1970, 1, 1});
+    m_dt_max_utc.setTime({0, 0, 0});
+    m_dt_max_utc = m_dt_max_utc.addMSecs(static_cast<qint64>(ms_max));
 
-    qInfo() << "xaxis range changed, min: " << dt1_qstr << ", " <<  dt2_qstr;
+    if ((ms_max - ms_min) < 10){
+        std::cout << "\n!Warning, trying to set xaxis range to less than 10 millisecond";
+        std::cout << ", which is not allowed\n";
 
-    double diff_days;
+        m_dt_max_utc = m_dt_max_utc.addMSecs(10);
 
-    if (ms2 == ms1)
-        diff_days = 1000.0;
-    else
-        diff_days = static_cast<double>(ms2 - ms1) / static_cast<double>(1000*60*60*24);
+        QString dt_min_qstr = m_dt_min_utc.toString("yyyy-MM-dd HH:mm:ss.zzz");
+        QString dt_max_qstr = m_dt_max_utc.toString("yyyy-MM-dd HH:mm:ss.zzz");
+
+        std::cout << "Re-setting to :" << dt_min_qstr.toStdString();
+        std::cout << " -> " << dt_max_qstr.toStdString() << "\n\n";
+
+        this->setRange(m_dt_min_utc, m_dt_max_utc);
+    }
+
+    double diff = static_cast<double>(ms_max - ms_min);
+    diff = diff / (1000*3600*24);
+
+
+    QString dt1_qstr = m_dt_min_utc.toString("yyyy-MM-dd HH:mm:ss.zzz");
+    QString dt2_qstr = m_dt_max_utc.toString("yyyy-MM-dd HH:mm:ss.zzz");
+
+    double  diff_days = static_cast<double>(ms_max - ms_min) / static_cast<double>(1000*60*60*24);
+
+    std::vector<std::tuple<std::string, double>> raw_ticks_vect;
+
+    int max_ticks;
 
     if (diff_days > 2000) {
-
-        if (round_year(ms1, ms2)) {
-
-            this->setRange(QDateTime::fromMSecsSinceEpoch(ms1),
-                             QDateTime::fromMSecsSinceEpoch(ms2));
-
-            this->setTickCount(n_tick + 1);
-
-        } else {
-
-            this->setTickCount(n_tick + 1);
-            this->setFormat("yyyy");
-            this->setTitleText("Date");
-
-            qInfo() << "round years, complete all good ?";
-        }
-
+        raw_ticks_vect = make_year_list();
+        max_ticks = 20;
     } else if (diff_days > 60) {
-
-        if (round_month(ms1, ms2)) {
-
-            this->setRange(QDateTime::fromMSecsSinceEpoch(ms1),
-                             QDateTime::fromMSecsSinceEpoch(ms2));
-
-            this->setTickCount(n_tick + 1);
-
-        } else {
-
-            this->setTickCount(n_tick + 1);
-
-            this->setFormat("MMM yyyy");
-            this->setTitleText("Date");
-
-            qInfo() << "round months, complete all good ?";
-        }
-
+        raw_ticks_vect = make_month_list();
+        max_ticks = 10;
     } else if (diff_days > 3) {
+        raw_ticks_vect = make_day_list();
+        max_ticks = 8;
+    } else if (diff_days > 0.1) {
+        raw_ticks_vect = make_hr_list();
+        max_ticks = 8;
+    } else if (diff_days > 0.0015) {
+        raw_ticks_vect = make_minute_list();
+        max_ticks = 6;
 
+    } else if (diff_days > 0.000035) {
+        raw_ticks_vect = make_second_list();
+        max_ticks = 6;
+    } else {
+        max_ticks = 4;
+        raw_ticks_vect = make_raw_list(max_ticks);
+    }
 
-        if (round_day(ms1, ms2)) {
+    std::vector<std::tuple<std::string, double>> ticks_vect;
 
-            try {
+    if (raw_ticks_vect.size() >  max_ticks){
+        int num_ticks = static_cast<int>(raw_ticks_vect.size());
 
-                this->setRange(QDateTime::fromMSecsSinceEpoch(ms1),
-                             QDateTime::fromMSecsSinceEpoch(ms2));
+        int step = static_cast<int>(num_ticks / max_ticks);
+        int rest = num_ticks % max_ticks;
 
-                this->setTickCount(n_tick + 1);
-            }
+        if (rest > 0)
+            step++;
 
-            catch (const char* message) {
-                std::cout << "in round days, catch exception ";
-                std::cout << message << std::endl;
-            }
+        int i = 0;
 
-
-        } else {
-
-            this->setFormat("dd MMM yyyy");
-            this->setTitleText("Date");
-
-            qInfo() << "round days, complete all good ?";
-        }
-
-    } else if (diff_days > 0.125) {
-
-        if (round_hour(ms1, ms2)) {
-
-            this->setRange(QDateTime::fromMSecsSinceEpoch(ms1),
-                             QDateTime::fromMSecsSinceEpoch(ms2));
-
-            this->setTickCount(n_tick + 1);
-
-        } else {
-
-            this->setFormat("dd MMM yyyy hh:mm");
-            this->setTitleText("Date");
-
-            qInfo() << "round hours, complete all good ?";
+        while (i < num_ticks){
+            ticks_vect.push_back(raw_ticks_vect[i]);
+            i = i + step;
         }
 
     } else {
 
-        qInfo() << "Default, no rounding";
-
-        this->setTickCount(5);
-        this->setFormat("dd MMM yyyy hh:mm");
-        this->setTitleText("Date");
+        ticks_vect = raw_ticks_vect;
     }
+
+    m_chart_view->set_xaxis_ticks(ticks_vect);
+    m_chart_view->update_geometry();
 }
 
-void SmryXaxis::setMinAndMax(QDateTime min_val, QDateTime max_val)
-{
-    m_min = min_val;
-    m_max = max_val;
-}
 
-void SmryXaxis::setMinAndMax(qreal min_val, qreal max_val)
+std::tuple<double, double> SmryXaxis::get_xrange(bool full_range)
 {
-    m_min = QDateTime::fromMSecsSinceEpoch(min_val);
-    m_max = QDateTime::fromMSecsSinceEpoch(max_val);
+    if ((!xrange_set) || (full_range))
+        return std::make_tuple(static_cast<double>(m_dt_min_utc.toMSecsSinceEpoch()),
+                               static_cast<double>(m_dt_max_utc.toMSecsSinceEpoch()));
+    else
+        return std::make_tuple(static_cast<double>(xrange_from.toMSecsSinceEpoch()),
+                               static_cast<double>(xrange_to.toMSecsSinceEpoch()));
+
+
 }
 
 void SmryXaxis::resetAxisRange()
 {
-    this->setRange(m_min, m_max);
-}
-
-void SmryXaxis::print_range()
-{
-    std::cout << "\nfull range: " << std::endl;
-    std::cout << "min: " << m_min.toMSecsSinceEpoch();
-    std::cout << "   max: " << m_max.toMSecsSinceEpoch();
-    std::cout << std::endl;
-
-    std::cout << "\nxrange: " << std::endl;
-
-    std::cout << "min: " << xrange_from.toMSecsSinceEpoch();
-    std::cout << "   max: " << xrange_to.toMSecsSinceEpoch();
-    std::cout << std::endl;
-
+    this->setRange(m_dt_min_utc, m_dt_max_utc);
 }
 
 void SmryXaxis::reset_range()
 {
-    xrange_from = m_min;
-    xrange_to = m_max;
+    xrange_from = m_dt_min_utc;
+    xrange_to = m_dt_max_utc;
 
     xrange_set = false;
 
 }
-
-std::tuple<double, double> SmryXaxis::get_xrange()
-{
-    return std::make_tuple(static_cast<double>(xrange_from.toMSecsSinceEpoch()),
-                           static_cast<double>(xrange_to.toMSecsSinceEpoch()));
-}
-
