@@ -2242,6 +2242,21 @@ bool SmryAppl::eventFilter ( QObject *object, QEvent *event )
 }
 
 
+void SmryAppl::switch_markes()
+{
+    bool all_visible = true;
+
+    for ( auto s : series[chart_ind] )
+        if ( !s->pointsVisible() )
+            all_visible = false;
+
+    bool new_flag = all_visible ? false : true;
+
+    for ( auto s : series[chart_ind] )
+        s->setPointsVisible ( new_flag );
+}
+
+
 void SmryAppl::keyPressEvent ( QKeyEvent *event )
 {
 
@@ -2299,13 +2314,7 @@ void SmryAppl::keyPressEvent ( QKeyEvent *event )
 
             } else if ( ( cmd_var.substr ( 0,2 ) == ":m" ) || ( cmd_var.substr ( 0,2 ) == ":M" ) ) {
 
-                for ( auto s : series[chart_ind] ) {
-                    if ( s->pointsVisible() ) {
-                        s->setPointsVisible ( false );
-                    } else {
-                        s->setPointsVisible ( true );
-                    }
-                }
+                switch_markes();
 
                 this->add_cmd_to_hist(cmd_var);
                 this->reset_cmdline();
@@ -2497,6 +2506,11 @@ void SmryAppl::keyPressEvent ( QKeyEvent *event )
 
         auto min_max_range = axisX[chart_ind]->get_xrange();
         update_all_yaxis(min_max_range, chart_ind, true);
+    }
+
+    else if ((m_smry_loaded) && ((event->modifiers() && Qt::ControlModifier && event->key() == Qt::Key_M))) {
+
+        switch_markes();
     }
 
     else if ((m_smry_loaded) && ((event->modifiers() && Qt::ControlModifier && event->key() == Qt::Key_C))) {
