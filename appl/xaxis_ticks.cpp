@@ -55,7 +55,7 @@ void XaxisTicks::paint(QPainter *painter, const QStyleOptionGraphicsItem *option
     auto bot_chart = rect1.y() + rect1.height();
     auto bot_plot = rect2.y() + rect2.height();
 
-    auto lbl_ypos = bot_plot + (bot_chart - bot_plot)*0.2;
+    auto lbl_ypos = bot_plot + (bot_chart - bot_plot)*0.05;
 
     for (int n = 0; n < max_number_of_labels; n++)
         m_labels[n]->setVisible(false);
@@ -82,7 +82,7 @@ void XaxisTicks::paint(QPainter *painter, const QStyleOptionGraphicsItem *option
             m_labels[n]->setText(lbl);
 
             QFont font1("serifed style");  // default on Linux
-            font1.setPointSize(9);
+            font1.setPointSize(8);
 
             //font1.setFamily("Arial");  // default on Windows
             //font1.setFamily("serifed style");  // default on Linux
