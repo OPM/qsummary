@@ -85,3 +85,29 @@ void ChartView::update_geometry()
 {
     m_xaxis_obj->prepare_update();
 }
+
+
+void ChartView::update_graphics()
+{
+    // repaint is not working
+    //this->repaint();
+
+    // this works but this is not pretty
+    // will keep this for now
+
+    QRect cv_rect = this->rect();
+
+    this->resize(cv_rect.width()+1, cv_rect.height());
+    this->resize(cv_rect.width()-1, cv_rect.height());
+
+}
+
+void ChartView::hide_xaxis_obj()
+{
+    m_xaxis_obj->set_visible(false);
+}
+
+void ChartView::show_xaxis_obj()
+{
+    m_xaxis_obj->set_visible(true);
+}

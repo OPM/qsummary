@@ -35,6 +35,10 @@ public:
     void set_xaxis_ticks(const std::vector<std::tuple<std::string, double>>& xaxis_ticks);
     void update_geometry();
 
+    void update_graphics();
+    void hide_xaxis_obj();
+    void show_xaxis_obj();
+
 protected:
 
     void keyPressEvent(QKeyEvent *event);

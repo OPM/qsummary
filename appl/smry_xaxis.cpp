@@ -31,8 +31,8 @@ SmryXaxis::SmryXaxis(ChartView *chart_view, QObject *parent)
       : QDateTimeAxis(parent),
       m_chart_view(chart_view)
 {
-
     this->setVisible(false);
+    m_chart_view->show_xaxis_obj();
 
     m_dt_min_utc.setTimeSpec(Qt::UTC);
     m_dt_max_utc.setTimeSpec(Qt::UTC);
