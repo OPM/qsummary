@@ -694,6 +694,12 @@ bool SmryAppl::add_new_series ( int chart_ind, int smry_ind, std::string vect_na
 
     this->update_chart_title_and_legend ( chart_ind );
 
+    // tskille: need something here to repaint the chart view.
+    // this is not a good fix, but works for now
+
+    chart_view_list[chart_ind]->update_graphics();
+
+
     std::string lbl_str = std::to_string ( chart_ind + 1 ) + "/" + std::to_string ( chartList.size() );
     lbl_plot->setText ( QString::fromStdString ( lbl_str ) );
 
@@ -1243,6 +1249,8 @@ void SmryAppl::delete_last_series()
 
         chartList[chart_ind]->removeAxis ( axisY[chart_ind][0] );
         chartList[chart_ind]->removeAxis ( axisX[chart_ind] );
+
+        chart_view_list[chart_ind]->hide_xaxis_obj();
 
         delete ( axisX[chart_ind] );
         delete ( axisY[chart_ind][0] );
@@ -2639,15 +2647,21 @@ void SmryAppl::keyPressEvent ( QKeyEvent *event )
 void SmryAppl::handle_delete_series()
 {
     if ( series[chart_ind].size() > 0 ) {
+
         delete_last_series();
+
+        // tskille: need something here to repaint the chart view.
+        // this is not a good fix, but works for now
+
+        chart_view_list[chart_ind]->update_graphics();
 
     } else {
 
         if ( chartList.size() > 1 ) {
-
             this->delete_chart ( chart_ind );
         }
     }
+
 }
 
 

@@ -31,7 +31,6 @@ XaxisTicks::XaxisTicks(QChart *chart):
     QGraphicsItem(chart),
     m_chart(chart)
 {
-    n=0;
     for (int n = 0; n < max_number_of_labels; n++){
         m_labels.push_back(std::make_unique<QGraphicsSimpleTextItem>(m_chart));
         m_labels.back()->setVisible(false);
@@ -122,7 +121,17 @@ void XaxisTicks::prepare_update()
 void XaxisTicks::set_xaxis_ticks(const std::vector<std::tuple<std::string, double>>& xaxis_ticks)
 {
     if (xaxis_ticks.size() > max_number_of_labels)
-        throw std::runtime_error("number of xaxis ticks are larger than maximum ");
+        throw std::runtime_error("number of xaxis ticks " + std::to_string(xaxis_ticks.size()) + " are larger than maximum " +
+            std::to_string(max_number_of_labels)   );
 
     m_xaxis_ticks = xaxis_ticks;
+}
+
+void XaxisTicks::set_visible(bool value)
+{
+    this->setVisible(value);
+
+    if (!value)
+        for (int n = 0; n < max_number_of_labels; n++)
+            m_labels[n]->setVisible(false);
 }

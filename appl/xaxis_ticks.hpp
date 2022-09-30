@@ -40,37 +40,21 @@ public:
 
     void set_xaxis_ticks(const std::vector<std::tuple<std::string, double>>& xaxis_ticks);
 
-    //void setText(const QString &text);
-    //void setAnchor(QPointF point);
-    //void updateGeometry();
-
     QRectF boundingRect() const;
     void paint(QPainter *painter, const QStyleOptionGraphicsItem *option,QWidget *widget);
 
     void prepare_update();
+    void set_visible(bool value);
 
-protected:
-
-//    void mousePressEvent(QGraphicsSceneMouseEvent *event);
-//    void mouseMoveEvent(QGraphicsSceneMouseEvent *event);
 
 private:
-    //QString m_text;
-    //QRectF m_textRect;
-    //QRectF m_rect;
-    //QPointF m_anchor;
-    //QFont m_font;
 
     const int max_number_of_labels = 25;
 
     QChart *m_chart;
     std::vector<std::tuple<std::string, double>> m_xaxis_ticks;
 
-    //std::vector<QGraphicsSimpleTextItem*> m_labels;
-
     std::vector<std::unique_ptr<QGraphicsSimpleTextItem>> m_labels;
-
-    int n;
 };
 
 #endif // XAXISTICKS_H
