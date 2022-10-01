@@ -101,31 +101,8 @@ static void printHelp()
     exit(0);
 }
 
-// Smart pointer to log file
-QScopedPointer<QFile>   m_logFile;
 
 
-void messageHandler(QtMsgType type, const QMessageLogContext &context, const QString &msg)
-{
-    // Open stream file writes
-    QTextStream out(m_logFile.data());
-
-    // Write the date of recording
-    out << QDateTime::currentDateTime().toString("yyyy-MM-dd hh:mm:ss.zzz ");
-
-    // By type determine to what level belongs message
-    switch (type)
-    {
-    case QtInfoMsg:     out << "Inf "; break;
-    case QtDebugMsg:    out << "Dbg "; break;
-    case QtWarningMsg:  out << "Warn "; break;
-    case QtCriticalMsg: out << "Crit "; break;
-    case QtFatalMsg:    out << "Fatal Error"; break;
-    }
-
-    out <<  ": "  << msg << Qt::endl;
-    out.flush();    // Clear the buffered data
-}
 
 template <typename T>
 void list_vectors(const std::unique_ptr<T>& loader)
@@ -686,18 +663,6 @@ int main(int argc, char *argv[])
     if ((homedir = getenv("HOME")) == NULL) {
         homedir = getpwuid(getuid())->pw_dir;
     }
-
-    std::string log_file(homedir);
-    log_file = log_file + "/qsummary.log";
-
-    m_logFile.reset(new QFile(QString::fromStdString(log_file)));
-
-    // Open the file logging
-    m_logFile.data()->open(QFile::Append | QFile::Text);
-
-    qInstallMessageHandler(messageHandler);
-
-    qInfo() << " ** Starting application ** ";
 
     setlocale(LC_ALL,"en_US.utf8");
     QLocale::setDefault(QLocale(QLocale::English, QLocale::UnitedStates));
