@@ -165,9 +165,6 @@ SmryAppl::SmryAppl(std::vector<std::string> arg_vect, loader_list_type& loaders,
         ss << "I/O  opening " << std::fixed << std::setprecision(5) << total_opening;
         ss << " sec, loading: " << std::fixed << std::setprecision(5) << total_loading << " sec";
 
-        qInfo() << "Finished loading from command line";
-        qInfo() << QString::fromStdString(ss.str());
-
         std::cout << ss.str() << std::endl;
 
     } else {
@@ -185,8 +182,6 @@ SmryAppl::SmryAppl(std::vector<std::string> arg_vect, loader_list_type& loaders,
 
 void SmryAppl::init_new_chart()
 {
-    qInfo() << "Init new chart";
-
     charts_list.push_back ( {} );
 
     QtCharts::QChart* chart = new QtCharts::QChart();
@@ -315,16 +310,6 @@ bool SmryAppl::double_check_well_vector(std::string& vect_name, std::unique_ptr<
 
 bool SmryAppl::add_new_series ( int chart_ind, int smry_ind, std::string vect_name, int vaxis_ind, bool is_derived)
 {
-    QString message("Add new series");
-    if (smry_ind < 0)
-        message = message + " Derived summary, global ";
-    else
-        message = message + " " + QString::fromStdString(root_name_list[smry_ind]);
-
-    message = message + " " + QString::fromStdString(vect_name);
-
-    qInfo() << message;
-
     std::vector<float> datav;
 
     std::vector<float> timev;
@@ -378,8 +363,6 @@ bool SmryAppl::add_new_series ( int chart_ind, int smry_ind, std::string vect_na
     }
 
     if ((vect_name == "TIMESTEP") && (all_steps) && (!hasVect)){
-
-        qInfo() << "Manually create a timestep vector";
 
         datav.reserve(timev.size());
         datav.push_back(timev[0]);
@@ -531,8 +514,6 @@ bool SmryAppl::add_new_series ( int chart_ind, int smry_ind, std::string vect_na
 
         yaxsis_ind = axisY[chart_ind].size()-1;
 
-        qInfo() << "attach series to new y-axis " << yaxsis_ind ;
-
         if ( yaxsis_ind == 0 )
             chartList[chart_ind]->addAxis ( axisY[chart_ind][yaxsis_ind], Qt::AlignLeft );
         else
@@ -543,11 +524,7 @@ bool SmryAppl::add_new_series ( int chart_ind, int smry_ind, std::string vect_na
 
     } else {
 
-        qInfo() << "attach series to existing y-axis, index = " << yaxsis_ind ;
-
         if ( mult_type != axisY[chart_ind][yaxsis_ind]->multiplier_type() ) {
-
-            qInfo() << "mult_type not same as existing  = ";
 
             float existing_mult = axisY[chart_ind][yaxsis_ind]->multiplier();
 
@@ -615,18 +592,6 @@ bool SmryAppl::add_new_series ( int chart_ind, int smry_ind, std::string vect_na
 
     // ->  3.2e-3
 
-    std::string msg_str = "len timev = " + std::to_string(timev.size());
-    msg_str = msg_str + " , len datav = " + std::to_string(datav.size());
-    msg_str = msg_str + " , n0 = " + std::to_string(n0);
-    msg_str = msg_str + " , n1 = " + std::to_string(n1);
-
-    qInfo() << " appending series data from raw summary vectors";
-    qInfo() << QString::fromStdString(msg_str);
-
-
-    //QString dt_start_qstr = dt_start_sim.toString("yyyy-MM-dd HH:mm:ss.zzz");
-    //std::cout << "\nstart: " << dt_start_qstr.toStdString() << "\n\n";
-
     for ( size_t n = n0; n <  n1 + 1; n++ ) {
 
         if (!isnan(datav[n])) {
@@ -677,20 +642,14 @@ bool SmryAppl::add_new_series ( int chart_ind, int smry_ind, std::string vect_na
 
 
     series[chart_ind].back()->attachAxis ( axisX[chart_ind] );
-    qInfo() << " > xaxis attached to new series ";
-
     series[chart_ind].back()->attachAxis ( axisY[chart_ind][yaxsis_ind] );
-    qInfo() << " > yaxis attached to new series ";
 
     // ->  5.6e-3
 
     yaxis_map[series[chart_ind].back()] = axisY[chart_ind][yaxsis_ind];
 
     this->update_xaxis_range ( axisX[chart_ind] );
-    qInfo() << " > xaxis range updated ";
-
     this->update_axis_range ( axisY[chart_ind][yaxsis_ind] );
-    qInfo() << " > yaxis range updated ";
 
     this->update_chart_title_and_legend ( chart_ind );
 
@@ -730,12 +689,6 @@ bool SmryAppl::add_new_ens_series ( int chart_ind, std::string vect_name, int va
         }
     }
 
-
-    QString message("Add ensemble new series");
-    message = message + " " + QString::fromStdString(root_name_list[smry_ind]);
-    message = message + " " + QString::fromStdString(vect_name);
-
-    qInfo() << message;
 
     size_t num_files = m_file_type.size();
 
@@ -905,9 +858,6 @@ bool SmryAppl::add_new_ens_series ( int chart_ind, std::string vect_name, int va
     std::ostringstream ss;
 
     ss << "I/O  loading: " << std::fixed << std::setprecision(5) << total_loading << " sec\n";
-
-    qInfo() << "Finished loading from command line";
-    qInfo() << QString::fromStdString(ss.str());
 
     std::cout << ss.str() << std::endl;
 
@@ -1139,8 +1089,6 @@ void SmryAppl::reopen_loader(int n, std::unique_ptr<T>& smry, const std::filesys
 
 void SmryAppl::reload_and_update_charts()
 {
-    qInfo() << "Start re-load and update all charts ";
-
     vect_list.clear();
 
     for (size_t n = 0; n < m_smry_files.size(); n++){
@@ -1159,9 +1107,7 @@ void SmryAppl::reload_and_update_charts()
         } else {
 
             std::string msg = "re-load of smspec " + m_smry_files[n].string() + "failed, file not found ";
-            std::cout << "\n!up, " << msg << std::endl;
-
-            qInfo() << QString::fromStdString(msg);
+            std::cout << "\n!warning, " << msg << std::endl;
         }
     }
 
@@ -1217,18 +1163,11 @@ void SmryAppl::reload_and_update_charts()
     chart_ind = current_chart_ind;
 
     stackedWidget->setCurrentIndex(chart_ind);
-
-    qInfo() << "re-load completed ";
 }
 
 
 void SmryAppl::delete_last_series()
 {
-    QString message = "Delete series: ";
-    message = message + " chart index = " + QString::number(chart_ind);
-
-    qInfo() << message;
-
     auto axis = series[chart_ind].back()->attachedAxes();
 
     if ( series[chart_ind].size() > 0 ) {
@@ -1316,11 +1255,6 @@ void SmryAppl::delete_last_series()
 void  SmryAppl::delete_chart ( int ind )
 {
     chart_ind = ind;
-
-    QString message = "Delete chart: ";
-    message = message + " chart index = " + QString::number(chart_ind);
-
-    qInfo() << message;
 
     while ( series[chart_ind].size() > 0 )
         this->delete_last_series();
@@ -1936,11 +1870,6 @@ void SmryAppl::reset_cmdline()
 
 void SmryAppl::copy_to_clipboard()
 {
-    std::string info = "copied chart " + std::to_string(chart_ind + 1) + " to clipboard";
-    QString qinfo = QString::fromStdString(info);
-
-    qInfo() << qinfo;
-
     QClipboard *clipboard = QGuiApplication::clipboard();
 /*
     QRect rect = chart_view_list[chart_ind]->rect();
@@ -2493,8 +2422,6 @@ void SmryAppl::keyPressEvent ( QKeyEvent *event )
 
     else if ((m_smry_loaded) && ((event->modifiers() && Qt::ControlModifier && event->key() == Qt::Key_R))) {
 
-        qInfo() << "<ctrl> + r  --> reset axis range  ";
-
         chartList[chart_ind]->zoomReset();
 
         axisX[chart_ind]->resetAxisRange();
@@ -2508,8 +2435,6 @@ void SmryAppl::keyPressEvent ( QKeyEvent *event )
     }
 
     else if ((m_smry_loaded) && ((event->modifiers() && Qt::ControlModifier && event->key() == Qt::Key_Z))) {
-
-        qInfo() << "<ctrl> + z  --> reset axis range  ";
 
         auto min_max_range = axisX[chart_ind]->get_xrange();
         update_all_yaxis(min_max_range, chart_ind, true);
@@ -2531,15 +2456,11 @@ void SmryAppl::keyPressEvent ( QKeyEvent *event )
 
             if (( series[chart_ind].size() > 0 ) || (ens_series[chart_ind].size() > 0)) {
 
-                qInfo() << "Page Down, init new chart ";
-
                 this->init_new_chart();
 
                 chart_ind ++;
                 stackedWidget->setCurrentIndex(chart_ind);
                 this->update_chart_labels();
-
-                qInfo() << "Chart index is now " << chart_ind;
 
                 lbl_rootn->setText ( QString::fromStdString ( root_name_list[smry_ind] ) );
                 lbl_plot->setText ( "new chart" );
@@ -2547,10 +2468,7 @@ void SmryAppl::keyPressEvent ( QKeyEvent *event )
 
         } else {
 
-
             chart_ind ++;
-            qInfo() << "Page Down, chart index is now " << chart_ind;
-
             stackedWidget->setCurrentIndex(chart_ind);
 
             this->update_chart_labels();
@@ -2561,8 +2479,6 @@ void SmryAppl::keyPressEvent ( QKeyEvent *event )
 
         if ( chart_ind > 0 ) {
             chart_ind --;
-
-            qInfo() << "Page Up, chart index is now " << chart_ind;
 
             stackedWidget->setCurrentIndex(chart_ind);
 
