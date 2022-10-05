@@ -28,6 +28,7 @@ add_library(smry_appl
    appl/point_info.cpp
    appl/qsum_cmdf.cpp
    appl/derived_smry.cpp
+   appl/qsum_func_lib.cpp
   )
 
 add_executable(qsummary main.cpp)
