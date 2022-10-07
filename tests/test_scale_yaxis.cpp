@@ -20,7 +20,7 @@
 #include <QtTest/QtTest>
 
 #include <appl/smry_appl.hpp>
-
+#include <tests/qsum_test_utility.hpp>
 
 class TestQsummary: public QObject
 {
@@ -38,51 +38,12 @@ private slots:
 };
 
 
-
-SmryAppl::loader_list_type make_loaders(std::vector<std::string>& fname_list)
-{
-    SmryAppl::loader_list_type loaders;
-
-    std::vector<std::filesystem::path> smry_files;
-    std::unordered_map<int, std::unique_ptr<Opm::EclIO::ESmry>> esmry_loader;
-    std::unordered_map<int, std::unique_ptr<Opm::EclIO::ExtESmry>> ext_esmry_loader;
-
-    std::vector<FileType> ftype_list;
-
-    for (auto& filename : fname_list)
-       smry_files.push_back(filename);
-
-    for (auto& smry_file: smry_files){
-        std::string ext = smry_file.extension().string();
-        if (ext == ".SMSPEC")
-            ftype_list.push_back(FileType::SMSPEC);
-        else if (ext == ".ESMRY")
-            ftype_list.push_back(FileType::ESMRY);
-        else
-            throw std::invalid_argument("Invalid file type");
-    }
-
-    for (size_t n = 0; n < fname_list.size(); n++){
-        if (ftype_list[n] == FileType::SMSPEC)
-            esmry_loader[n] = std::make_unique<Opm::EclIO::ESmry>(fname_list[n]);
-        else if (ftype_list[n] == FileType::ESMRY)
-            ext_esmry_loader[n] = std::make_unique<Opm::EclIO::ExtESmry>(fname_list[n]);
-        else
-            throw std::invalid_argument("Invalid file type");
-    }
-
-    loaders = std::make_tuple(smry_files, ftype_list, std::move(esmry_loader), std::move(ext_esmry_loader));
-
-    return loaders;
-}
-
-
 void TestQsummary::test_1a()
 {
     std::vector<std::string> fname_list;
     fname_list.push_back("../tests/smry_files/SENS0.ESMRY");
 
-    auto loaders = make_loaders(fname_list);
+    auto loaders = QSum::make_loaders(fname_list);
 
     std::vector<SmryAppl::vect_input_type> vect_list_c1;
 
@@ -115,7 +76,7 @@ void TestQsummary::test_1b()
     std::vector<std::string> fname_list;
     fname_list.push_back("../tests/smry_files/SENS0.ESMRY");
 
-    auto loaders = make_loaders(fname_list);
+    auto loaders = QSum::make_loaders(fname_list);
 
     std::vector<SmryAppl::vect_input_type> vect_list_c1;
 
@@ -150,7 +111,7 @@ void TestQsummary::test_2a()
     std::vector<std::string> fname_list;
     fname_list.push_back("../tests/smry_files/SENS0.ESMRY");
 
-    auto loaders = make_loaders(fname_list);
+    auto loaders = QSum::make_loaders(fname_list);
 
     std::vector<SmryAppl::vect_input_type> vect_list_c1;
 
@@ -195,7 +156,7 @@ void TestQsummary::test_2b()
     std::vector<std::string> fname_list;
     fname_list.push_back("../tests/smry_files/SENS0.ESMRY");
 
-    auto loaders = make_loaders(fname_list);
+    auto loaders = QSum::make_loaders(fname_list);
 
     SmryAppl::input_list_type input_list;
 
@@ -237,7 +198,7 @@ void TestQsummary::test_2c()
     fname_list.push_back("../tests/smry_files/SENS1.ESMRY");
     fname_list.push_back("../tests/smry_files/SENS2.ESMRY");
 
-    auto loaders = make_loaders(fname_list);
+    auto loaders = QSum::make_loaders(fname_list);
 
     std::vector<SmryAppl::vect_input_type> vect_list_c1;
 
@@ -288,7 +249,7 @@ void TestQsummary::test_2d()
     fname_list.push_back("../tests/smry_files/SENS1.ESMRY");
     fname_list.push_back("../tests/smry_files/SENS2.ESMRY");
 
-    auto loaders = make_loaders(fname_list);
+    auto loaders = QSum::make_loaders(fname_list);
 
     std::vector<SmryAppl::vect_input_type> vect_list_c1;
 

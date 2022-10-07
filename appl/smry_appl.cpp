@@ -1930,7 +1930,8 @@ bool SmryAppl::eventFilter ( QObject *object, QEvent *event )
 
         if ( keyEvent->key()  == Qt::Key_Delete  &&  m_ctrl_key  && !m_shift_key && !m_alt_key ) {
 
-            this->delete_chart ( chart_ind );
+            if ( chartList.size() > 1 )
+                this->delete_chart ( chart_ind );
 
             return true;
 
@@ -2595,7 +2596,8 @@ void SmryAppl::keyPressEvent ( QKeyEvent *event )
 
     else if ( m_smry_loaded && event->key() == Qt::Key_Delete  &&  m_ctrl_key  && !m_shift_key && !m_alt_key ){
 
-        this->delete_chart ( chart_ind );
+        if ( chartList.size() > 1 )
+            this->delete_chart ( chart_ind );
     }
 
     else if ((m_smry_loaded) &&  (( event->key() == Qt::Key_Delete ))) {
