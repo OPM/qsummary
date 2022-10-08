@@ -74,6 +74,8 @@ public:
     QLineEdit* get_cmdline() { return le_commands; };
     SmryYaxis* get_smry_yaxis(int chart_ind, int axis_ind);
 
+    std::vector<SmrySeries*> get_smry_series(int chart_ind);
+
     size_t number_of_charts() { return chartList.size(); }
     size_t number_of_series(int chart_ind) { return series[chart_ind].size(); }
 
@@ -82,6 +84,7 @@ protected:
 
     bool eventFilter(QObject *object, QEvent *event);
     void keyPressEvent(QKeyEvent * e);
+    void keyReleaseEvent(QKeyEvent *event);
 
 
 private slots:
@@ -106,6 +109,10 @@ private:
     bool axis_mode;
     bool ens_mode = false;
     bool m_smry_loaded = false;
+
+    bool m_shift_key = false;
+    bool m_ctrl_key = false;
+    bool m_alt_key = false;
 
     std::string str_var;
     std::string cmd_var;
