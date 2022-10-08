@@ -54,16 +54,25 @@ add_executable(cmdf_input_chart
     )
 
 add_executable(scale_yaxis
+    tests/qsum_test_utility.cpp
     tests/test_scale_yaxis.cpp
+    )
+
+add_executable(smryappl
+    tests/qsum_test_utility.cpp
+    appl/qsum_func_lib.hpp
+    tests/test_smry_appl.cpp
     )
 
 
 add_test(NAME cmdf_define COMMAND cmdf_define)
 add_test(NAME cmdf_input_chart COMMAND cmdf_input_chart)
 add_test(NAME scale_yaxis COMMAND scale_yaxis)
+add_test(NAME smryappl COMMAND smryappl)
 
 
 target_link_libraries(cmdf_define PRIVATE smry_appl Qt5::Test Qt5::Core Qt5::Widgets Qt5::Charts stdc++fs)
 target_link_libraries(cmdf_input_chart PRIVATE smry_appl Qt5::Test Qt5::Core Qt5::Widgets Qt5::Charts stdc++fs)
 target_link_libraries(scale_yaxis PRIVATE smry_appl Qt5::Test Qt5::Core Qt5::Widgets Qt5::Charts stdc++fs)
+target_link_libraries(smryappl PRIVATE smry_appl Qt5::Test Qt5::Core Qt5::Widgets Qt5::Charts stdc++fs)
 
