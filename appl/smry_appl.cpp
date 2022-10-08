@@ -1896,12 +1896,39 @@ bool SmryAppl::eventFilter ( QObject *object, QEvent *event )
         }
     }
 
+    if ( event->type() == QEvent::KeyRelease ) {
+
+        QKeyEvent *keyEvent = static_cast<QKeyEvent *> ( event );
+
+        if ( keyEvent->key()  == Qt::Key_Alt )
+            m_alt_key = false;
+
+        if ( keyEvent->key()  == Qt::Key_Shift )
+            m_shift_key = false;
+
+        if ( keyEvent->key()  == Qt::Key_Control )
+            m_ctrl_key = false;
+    }
+
+    if ( event->type() == QEvent::KeyPress ) {
+        QKeyEvent *keyEvent = static_cast<QKeyEvent *> ( event );
+
+        if ( keyEvent->key()  == Qt::Key_Alt )
+            m_alt_key = true;
+
+        if ( keyEvent->key()  == Qt::Key_Shift )
+            m_shift_key = true;
+
+        if ( keyEvent->key()  == Qt::Key_Control )
+            m_ctrl_key = true;
+    }
+
 
     if ( event->type() == QEvent::KeyPress ) {
 
         QKeyEvent *keyEvent = static_cast<QKeyEvent *> ( event );
 
-        if (( keyEvent->key()  == Qt::Key_Delete ) && ( keyEvent->modifiers() ) && ( Qt::ControlModifier )) {
+        if ( keyEvent->key()  == Qt::Key_Delete  &&  m_ctrl_key  && !m_shift_key && !m_alt_key ) {
 
             this->delete_chart ( chart_ind );
 
@@ -1913,15 +1940,14 @@ bool SmryAppl::eventFilter ( QObject *object, QEvent *event )
 
             return true;
 
-
-        } else if (( keyEvent->key()  == Qt::Key_Z ) && ( keyEvent->modifiers() ) && ( Qt::ControlModifier )) {
+        } else if ( keyEvent->key()  == Qt::Key_Z  &&  m_ctrl_key  && !m_shift_key && !m_alt_key ) {
 
             auto min_max_range = axisX[chart_ind]->get_xrange();
             update_all_yaxis(min_max_range, chart_ind, true);
 
             return true;
 
-        } else if (( keyEvent->key()  == Qt::Key_C ) && ( keyEvent->modifiers() ) && ( Qt::ControlModifier )) {
+        } else if ( keyEvent->key() == Qt::Key_C  &&  m_ctrl_key  && !m_shift_key && !m_alt_key ) {
 
             this->copy_to_clipboard();
         }
@@ -2190,9 +2216,30 @@ void SmryAppl::switch_markes()
         s->setPointsVisible ( new_flag );
 }
 
+void SmryAppl::keyReleaseEvent(QKeyEvent *event)
+{
+    if ( event->key()  == Qt::Key_Alt )
+        m_alt_key = false;
+
+    if ( event->key()  == Qt::Key_Shift )
+        m_shift_key = false;
+
+    if ( event->key()  == Qt::Key_Control )
+        m_ctrl_key = false;
+}
+
 
 void SmryAppl::keyPressEvent ( QKeyEvent *event )
 {
+    if ( event->key()  == Qt::Key_Alt )
+        m_alt_key = true;
+
+    if ( event->key()  == Qt::Key_Shift )
+        m_shift_key = true;
+
+    if ( event->key()  == Qt::Key_Control )
+        m_ctrl_key = true;
+
 
     if (( event->key() == Qt::Key_Return ) && (m_smry_loaded)) {
 
@@ -2375,7 +2422,7 @@ void SmryAppl::keyPressEvent ( QKeyEvent *event )
         }
     }
 
-    else if ( ( event->key() == Qt::Key_O ) && ( event->modifiers() ) && ( Qt::ControlModifier ) ) {
+    else if ( event->key() == Qt::Key_O  &&  m_ctrl_key  && !m_shift_key && !m_alt_key ) {
 
         QString fileName = QFileDialog::getOpenFileName ( this, tr ( "Open Summary" ),
                            QDir::currentPath(), tr ( "Summary Files (*.SMSPEC *.ESMRY);;SMSPEC Files (*.SMSPEC);;ESMRY Files (*.ESMRY)" ) );
@@ -2420,7 +2467,7 @@ void SmryAppl::keyPressEvent ( QKeyEvent *event )
         }
     }
 
-    else if ((m_smry_loaded) && ((event->modifiers() && Qt::ControlModifier && event->key() == Qt::Key_R))) {
+    else if (m_smry_loaded && event->key() == Qt::Key_R &&  m_ctrl_key  && !m_shift_key && !m_alt_key) {
 
         chartList[chart_ind]->zoomReset();
 
@@ -2434,23 +2481,23 @@ void SmryAppl::keyPressEvent ( QKeyEvent *event )
 
     }
 
-    else if ((m_smry_loaded) && ((event->modifiers() && Qt::ControlModifier && event->key() == Qt::Key_Z))) {
+    else if ( m_smry_loaded && event->key() == Qt::Key_Z  &&  m_ctrl_key  && !m_shift_key && !m_alt_key ) {
 
         auto min_max_range = axisX[chart_ind]->get_xrange();
         update_all_yaxis(min_max_range, chart_ind, true);
     }
 
-    else if ((m_smry_loaded) && ((event->modifiers() && Qt::ControlModifier && event->key() == Qt::Key_M))) {
+    else if ( m_smry_loaded && event->key() == Qt::Key_M  &&  m_ctrl_key  && !m_shift_key && !m_alt_key ) {
 
         switch_markes();
     }
 
-    else if ((m_smry_loaded) && ((event->modifiers() && Qt::ControlModifier && event->key() == Qt::Key_C))) {
+    else if ( m_smry_loaded && event->key() == Qt::Key_C  &&  m_ctrl_key  && !m_shift_key && !m_alt_key ) {
 
         this->copy_to_clipboard();
     }
 
-    else if ((m_smry_loaded) &&  ( event->key() == Qt::Key_PageDown )) {
+    else if (m_smry_loaded && event->key() == Qt::Key_PageDown ) {
 
         if ( ( chart_ind + 1 ) == chartList.size() ) {
 
@@ -2475,7 +2522,7 @@ void SmryAppl::keyPressEvent ( QKeyEvent *event )
         }
     }
 
-    else if ((m_smry_loaded) && ( event->key() == Qt::Key_PageUp )) {
+    else if (m_smry_loaded &&  event->key() == Qt::Key_PageUp ) {
 
         if ( chart_ind > 0 ) {
             chart_ind --;
@@ -2485,14 +2532,13 @@ void SmryAppl::keyPressEvent ( QKeyEvent *event )
             this->update_chart_labels();
         }
     }
-
-    else if ((m_smry_loaded) && (( event->key() == Qt::Key_F )  && ( event->modifiers() ) && ( Qt::ControlModifier ))) {
+    else if ( m_smry_loaded && event->key() == Qt::Key_F  &&  m_ctrl_key  && !m_shift_key && !m_alt_key ){
 
         this->export_figure("/project/multiscale/users/tskille/prog/test_data/tjohei.png", 0);
         std::cout << "figure exported\n";
     }
 
-    else if ((m_smry_loaded) && (( event->key() == Qt::Key_W ) && ( event->modifiers() ) && ( Qt::ControlModifier ))) {
+    else if ( m_smry_loaded && event->key() == Qt::Key_W  &&  m_ctrl_key  && !m_shift_key && !m_alt_key ){
 
         std::string filt = "*";
 
@@ -2507,7 +2553,7 @@ void SmryAppl::keyPressEvent ( QKeyEvent *event )
         }
     }
 
-    else if ((m_smry_loaded) && (( event->key() == Qt::Key_G ) && ( event->modifiers() ) && ( Qt::ControlModifier ))) {
+    else if ( m_smry_loaded && event->key() == Qt::Key_G  &&  m_ctrl_key  && !m_shift_key && !m_alt_key ){
 
         std::string filt = "*";
 
@@ -2522,8 +2568,7 @@ void SmryAppl::keyPressEvent ( QKeyEvent *event )
         }
     }
 
-
-    else if ((m_smry_loaded) && (( event->key() == Qt::Key_A ) && ( event->modifiers() ) && ( Qt::ControlModifier ))) {
+    else if ( m_smry_loaded && event->key() == Qt::Key_A  &&  m_ctrl_key  && !m_shift_key && !m_alt_key ){
 
         std::string filt = "*";
 
@@ -2538,7 +2583,7 @@ void SmryAppl::keyPressEvent ( QKeyEvent *event )
         }
     }
 
-    else if ((m_smry_loaded) &&  (( event->key() == Qt::Key_P ) && ( event->modifiers() ) && ( Qt::ControlModifier ))) {
+    else if ( m_smry_loaded && event->key() == Qt::Key_P  &&  m_ctrl_key  && !m_shift_key && !m_alt_key ){
 
         QString fileName = QFileDialog::getSaveFileName ( this, tr ( "Save File" ),
                            QDir::currentPath(),
@@ -2548,7 +2593,7 @@ void SmryAppl::keyPressEvent ( QKeyEvent *event )
     }
 
 
-    else if ((m_smry_loaded) &&  (( event->key() == Qt::Key_Delete ) && ( event->modifiers() ) && ( Qt::ControlModifier ))) {
+    else if ( m_smry_loaded && event->key() == Qt::Key_Delete  &&  m_ctrl_key  && !m_shift_key && !m_alt_key ){
 
         this->delete_chart ( chart_ind );
     }
@@ -2870,3 +2915,7 @@ SmryYaxis* SmryAppl::get_smry_yaxis(int chart_ind, int axis_ind)
     return axisY[chart_ind][axis_ind];
 }
 
+std::vector<SmrySeries*> SmryAppl::get_smry_series(int chart_ind)
+{
+    return series[chart_ind];
+}
