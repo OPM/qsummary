@@ -36,6 +36,9 @@ SmrySeries::SmrySeries(QChart *qtchart, QObject *parent)
 
     m_glob_min = std::numeric_limits<double>::max();
     m_glob_max = -1.0*std::numeric_limits<double>::max();
+
+    m_glob_min_x = std::numeric_limits<double>::max();
+    m_glob_max_x = -1.0*std::numeric_limits<double>::max();
 }
 
 void  SmrySeries::onPressed(const QPointF &point)
@@ -231,8 +234,14 @@ void SmrySeries::calcMinAndMax(){
 
     for (size_t n = 0; n < data.size(); n++) {
 
+        if ( static_cast<double>(data[n].x()) <= m_glob_min_x)
+            m_glob_min_x = static_cast<double>(data[n].x());
+
         if ( static_cast<double>(data[n].y()) <= m_glob_min)
             m_glob_min = static_cast<double>(data[n].y());
+
+        if ( static_cast<double>(data[n].x()) >= m_glob_max_x)
+            m_glob_max_x = static_cast<double>(data[n].x());
 
         if ( static_cast<double>(data[n].y()) >= m_glob_max)
             m_glob_max = static_cast<double>(data[n].y());

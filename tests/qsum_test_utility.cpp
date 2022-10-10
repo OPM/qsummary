@@ -60,7 +60,7 @@ SmryAppl::loader_list_type QSum::make_loaders(std::vector<std::string>& fname_li
     return loaders;
 }
 
-void QSum::add_vect_cmd_line(const std::string& vect_cmd, QLineEdit* cmdline )
+void QSum::add_cmd_line(const std::string& vect_cmd, QLineEdit* cmdline )
 {
     for (size_t n = 0; n < vect_cmd.size(); n++)
         QTest::keyClicks(cmdline, QString::fromStdString(vect_cmd.substr(n,1)));

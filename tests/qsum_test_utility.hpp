@@ -33,7 +33,7 @@ namespace QSum {
 
     SmryAppl::loader_list_type make_loaders(std::vector<std::string>& fname_list);
 
-    void add_vect_cmd_line(const std::string& vect_cmd, QLineEdit* cmdline );
+    void add_cmd_line(const std::string& vect_cmd, QLineEdit* cmdline );
 
 
 

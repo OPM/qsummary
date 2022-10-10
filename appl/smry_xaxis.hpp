@@ -34,14 +34,17 @@ public:
     SmryXaxis(ChartView *chart_view, QObject *parent = nullptr);
 
     bool set_range(std::string argstr);
+    void set_full_range(double min, double max);
     bool has_xrange() { return xrange_set; }
+    void set_xrange(bool value) { xrange_set = value; }
 
+    bool has_full_range();
+    
     void resetAxisRange();
-    void reset_range();
+    void print_ranges();
 
-    //bool set_range(double min, double max);
-
-    std::tuple<double, double> get_xrange(bool full_range = false);
+    std::tuple<double, double> get_xrange();
+    std::tuple<QDateTime, QDateTime> get_current_xrange();
 
 
 private slots:
@@ -72,6 +75,9 @@ private:
 
     QDateTime xrange_from;
     QDateTime xrange_to;
+
+    QDateTime full_xrange_from;
+    QDateTime full_xrange_to;
 
     ChartView *m_chart_view;
 
