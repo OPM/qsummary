@@ -1073,7 +1073,7 @@ void SmryAppl::adjust_yaxis_props(SmryYaxis* axis, double& min_data, double& max
 
 
 template <typename T>
-void SmryAppl::reopen_loader(int n, std::unique_ptr<T>& smry, const std::filesystem::path& smryfile)
+bool SmryAppl::reopen_loader(int n, std::unique_ptr<T>& smry, const std::filesystem::path& smryfile)
 {
     std::unique_ptr<T> smry_tmp;
     smry_tmp = std::make_unique<T> ( m_smry_files[n] );
@@ -1082,31 +1082,80 @@ void SmryAppl::reopen_loader(int n, std::unique_ptr<T>& smry, const std::filesys
     auto nstep = smry->numberOfTimeSteps();
 
     auto ftime = std::filesystem::last_write_time ( smryfile );
+    bool updated = false;
 
-    if ( ftime > file_stamp_vector[n] )
+    if ( ftime > file_stamp_vector[n] ){
         smry = std::move ( smry_tmp );
-    else if ( nstep_tmp > nstep )
+        updated = true;
+    } else if ( nstep_tmp > nstep ){
         smry = std::move ( smry_tmp );
+        updated = true;
+    }
+
+    if (updated) {
+        auto ftime = std::filesystem::last_write_time ( m_smry_files[n] );
+        file_stamp_vector[n] = ftime;
+    }
 
     vect_list.push_back ( smry->keywordList() );
+
+    return updated;
 }
 
-void SmryAppl::reload_and_update_charts()
+void SmryAppl::reset_axis_state(const std::vector<std::vector<QDateTime>>& xrange_state)
 {
+    size_t num_charts = xrange_state.size();
+
+    for (size_t c = 0; c <  num_charts; c++){
+
+        QDateTime dt_min_utc = xrange_state[c][0];
+        QDateTime dt_max_utc = xrange_state[c][1];
+        QDateTime xr_from = xrange_state[c][2];
+        QDateTime xr_to = xrange_state[c][3];
+        QDateTime full_xr_from = xrange_state[c][4];
+        QDateTime full_xr_to = xrange_state[c][5];
+
+        bool full_range = false;
+
+        if ((dt_min_utc == full_xr_from) && (dt_max_utc == full_xr_to))
+            full_range = true;
+
+        auto full_xrange = calc_min_max_dt(c);
+        full_xr_from = std::get<0>(full_xrange);
+        full_xr_to = std::get<1>(full_xrange);
+
+        if (full_range){
+            dt_min_utc = full_xr_from;
+            dt_max_utc = full_xr_to;
+        }
+
+        std::vector<QDateTime> mod_xrange_state;
+        mod_xrange_state = {dt_min_utc, dt_max_utc, xr_from, xr_to, full_xr_from, full_xr_to};
+
+        axisX[c]->set_xrange_state(mod_xrange_state);
+    }
+}
+
+
+bool SmryAppl::reload_and_update_charts()
+{
+    // check if some of the files are updated and re-load if this is the case
+
     vect_list.clear();
+    bool need_update = false;
 
     for (size_t n = 0; n < m_smry_files.size(); n++){
 
         if (std::filesystem::exists(m_smry_files[n] )) {
 
-            if (m_file_type[n] == FileType::SMSPEC){
+            bool updated;
+            if (m_file_type[n] == FileType::SMSPEC)
+                updated = reopen_loader( n, m_esmry_loader[n], m_smry_files[n] );
+            else if (m_file_type[n] == FileType::ESMRY)
+                updated = reopen_loader( n, m_ext_esmry_loader[n], m_smry_files[n] );
 
-                this->reopen_loader( n, m_esmry_loader[n], m_smry_files[n] );
-
-            } else if (m_file_type[n] == FileType::ESMRY){
-
-                this->reopen_loader( n, m_ext_esmry_loader[n], m_smry_files[n] );
-            }
+            if (updated)
+                need_update = true;
 
         } else {
 
@@ -1115,10 +1164,18 @@ void SmryAppl::reload_and_update_charts()
         }
     }
 
+    if (!need_update)
+        return false;
+
     if (m_derived_smry != nullptr)
         m_derived_smry->recalc(m_file_type, m_esmry_loader, m_ext_esmry_loader);
 
     std::vector<std::vector<std::tuple<int, std::string, int, bool>>> series_properties;
+    std::vector<std::vector<QDateTime>> xrange_state;
+
+    for ( int ind = 0; ind < chartList.size(); ind++ )
+        if (charts_list[ind].size() > 0)
+            xrange_state.push_back(axisX[ind]->get_xrange_state());
 
     for ( int ind = 0; ind < chartList.size(); ind++ ) {
 
@@ -1162,11 +1219,18 @@ void SmryAppl::reload_and_update_charts()
 
             add_new_series ( ind, smry_ind, vect_name, vaxis_ind, is_derived);
         }
+
+        this->reset_axis_state(xrange_state);
+
+        auto min_max_range = axisX[ind]->get_xrange();
+        update_all_yaxis(min_max_range, ind);
     }
 
     chart_ind = current_chart_ind;
 
     stackedWidget->setCurrentIndex(chart_ind);
+
+    return true;
 }
 
 
@@ -2268,7 +2332,7 @@ void SmryAppl::keyPressEvent ( QKeyEvent *event )
 
             if ( ( cmd_var == ":r" ) || ( cmd_var == ":R" ) ) {
 
-                this->reload_and_update_charts();
+                bool res = this->reload_and_update_charts();
 
                 this->add_cmd_to_hist(cmd_var);
                 this->reset_cmdline();
@@ -2519,13 +2583,16 @@ void SmryAppl::keyPressEvent ( QKeyEvent *event )
     else if (m_smry_loaded && event->key() == Qt::Key_R &&  m_ctrl_key  && !m_shift_key && !m_alt_key) {
 
         //chartList[chart_ind]->zoomReset();
-
         axisX[chart_ind]->resetAxisRange();
 
         auto min_max_range = axisX[chart_ind]->get_xrange();
 
         update_all_yaxis(min_max_range, chart_ind);
+    }
 
+    else if (m_smry_loaded && event->key() == Qt::Key_R &&  m_ctrl_key  && m_shift_key && !m_alt_key) {
+
+        bool res = this->reload_and_update_charts();
     }
 
     else if ( m_smry_loaded && event->key() == Qt::Key_Z  &&  m_ctrl_key  && !m_shift_key && !m_alt_key ) {
@@ -2969,6 +3036,29 @@ void SmryAppl::update_full_xrange(int chart_index)
 
     axisX[chart_index]->set_full_range(min_x, max_x);
 }
+
+std::tuple<QDateTime, QDateTime> SmryAppl::calc_min_max_dt(int chart_ind)
+{
+    QDateTime min_dt;
+    QDateTime max_dt;
+
+    if (series[chart_ind].size() > 0){
+        auto xrange = series[chart_ind][0]->get_min_max_dt_range();
+        min_dt = std::get<0>(xrange);
+        max_dt = std::get<1>(xrange);
+    }
+
+    for (size_t n = 1; n < series[chart_ind].size(); n++){
+        auto xrange = series[chart_ind][n]->get_min_max_dt_range();
+        if (std::get<0>(xrange) < min_dt)
+            min_dt = std::get<0>(xrange);
+        if (std::get<1>(xrange) > max_dt)
+            max_dt = std::get<1>(xrange);
+    }
+
+    return std::make_tuple(min_dt, max_dt);
+}
+
 
 void SmryAppl::select_first_chart()
 {

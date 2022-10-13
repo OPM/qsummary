@@ -88,7 +88,7 @@ static void printHelp()
 
     std::cout << " <ctrl> + c  copy visible chart to clipboard  \n";
     std::cout << " <ctrl> + r  reset chart zoom and x and y range  \n";
-    std::cout << " <shift> + r  reload data and update all charts  \n";
+    std::cout << " <ctrl> + <shift> + r  reload data and update all charts  \n";
     std::cout << " <ctrl> + p  create pdf file (open file dialog)  \n";
     std::cout << " <ctrl> + o  open summary file (open file dialog)  \n";
     std::cout << " <ctrl> + z  rescale value axis, ignore zero  \n";

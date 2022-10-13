@@ -90,7 +90,7 @@ void SmrySeries::onHovered(const QPointF &point, bool state)
 
         dt_utc = dt_utc.addMSecs(ms_correction);
 
-        QString qstr = dt_utc.toString("yyyy-MM-dd HH:mm:ss"); 
+        QString qstr = dt_utc.toString("yyyy-MM-dd HH:mm:ss");
 
         if (dt_utc.isDaylightTime())
             qstr = qstr + " ( daylight time ) ";
@@ -258,4 +258,25 @@ bool SmrySeries::all_values_zero()
 
     return true;
 }
+
+std::tuple<QDateTime,QDateTime> SmrySeries::get_min_max_dt_range()
+{
+    QDateTime dt_min_utc;
+    QDateTime dt_max_utc;
+
+    dt_min_utc.setTimeSpec(Qt::UTC);
+    dt_max_utc.setTimeSpec(Qt::UTC);
+
+    dt_min_utc.setDate({1970, 1, 1});
+    dt_min_utc.setTime({0, 0, 0});
+    dt_min_utc = dt_min_utc.addMSecs(static_cast<qint64>(m_glob_min_x));
+
+    dt_max_utc.setDate({1970, 1, 1});
+    dt_max_utc.setTime({0, 0, 0});
+    dt_max_utc = dt_max_utc.addMSecs(static_cast<qint64>(m_glob_max_x));
+
+    return std::make_tuple(dt_min_utc, dt_max_utc);
+}
+
+
 

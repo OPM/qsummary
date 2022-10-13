@@ -23,6 +23,10 @@
 #include <tests/qsum_test_utility.hpp>
 #include <appl/qsum_func_lib.hpp>
 
+#include <opm/io/eclipse/ExtESmry.hpp>
+#include <opm/io/eclipse/EclFile.hpp>
+#include <opm/io/eclipse/EclOutput.hpp>
+
 #include <chrono>
 #include <thread>
 
@@ -38,6 +42,8 @@ private slots:
     void test_scale_axis_vect_opt();
     void test_scale_axis_interactive_1();
     void test_scale_axis_interactive_2();
+
+    void test_reload_1();
 };
 
 const int max_number_of_charts = 2000;
@@ -133,6 +139,7 @@ bool chk_date_range(SmryXaxis* xaxis, int y1, int m1, int d1, int y2, int m2, in
     if (dt_to.date().day() != d2)
         return false;
 
+
     return true;
 }
 
@@ -154,6 +161,71 @@ bool chk_yaxis_val_range(SmryYaxis* yaxis, float y_from, float y_to)
     return true;
 }
 
+//void make_esmry_from_esmry(Opm::EclIO::EclFile& esmry, const std::string fname, int n_tsteps)
+//{
+void make_esmry_from_esmry(Opm::EclIO::EclFile& esmry, Opm::EclIO::ExtESmry& smry, const std::string fname, QDateTime to_dt)
+{
+    // write all time steps with datetime less that to_dt
+
+    auto timev = smry.get("TIME");
+
+    esmry.loadData();
+
+    auto start = esmry.get<int>("START");
+
+    QDate d1;
+    QTime t1;
+
+    d1.setDate(start[2],start[1],start[0]);
+    t1.setHMS(start[3],start[4],start[5],start[6]);
+
+    QDateTime start_dt;
+    start_dt.setTimeSpec(Qt::UTC);
+
+    start_dt.setDate(d1);
+    start_dt.setTime(t1);
+
+    QDateTime chk_dt;
+    chk_dt.setTimeSpec(Qt::UTC);
+
+    int n_tsteps = 0;
+    chk_dt = start_dt.addDays(timev[n_tsteps]);
+
+    while ((n_tsteps < timev.size()) && (chk_dt < to_dt))
+        chk_dt = start_dt.addDays(timev[n_tsteps++]);
+
+
+    auto keys = esmry.get<std::string>("KEYCHECK");
+    auto units = esmry.get<std::string>("UNITS");
+    auto orig_rstep = esmry.get<int>("RSTEP");
+    auto orig_tstep = esmry.get<int>("TSTEP");
+
+    size_t num_keys = keys.size();
+    size_t num_tsteps = orig_rstep.size();
+
+    if (n_tsteps > num_tsteps)
+        throw std::runtime_error("variable n_tsteps larger that number of time steps in input esmry file");
+
+    Opm::EclIO::EclOutput outfile(fname, false);
+
+    outfile.write("START", start);
+    outfile.write("KEYCHECK", keys);
+    outfile.write("UNITS", units);
+
+    std::vector<int> rstep(orig_rstep.begin(), orig_rstep.begin() + n_tsteps);
+    std::vector<int> tstep(orig_tstep.begin(), orig_tstep.begin() + n_tsteps);
+
+    outfile.write("RSTEP", rstep);
+    outfile.write("TSTEP", tstep);
+
+    for (size_t n = 0; n < num_keys; n++){
+        std::string key = "V" + std::to_string(n);
+        auto orig_data = esmry.get<float>(key);
+
+        std::vector<float> data(orig_data.begin(), orig_data.begin() + n_tsteps);
+        outfile.write(key, data);
+    }
+}
 
 
 void smry_input(const std::vector<std::string>& fname_list,
@@ -744,6 +816,199 @@ void TestQsummary::test_scale_axis_interactive_2()
 
     //window.grab().save("tmp.png");
 }
+
+
+void TestQsummary::test_reload_1()
+{
+    Opm::EclIO::EclFile esmry1("../tests/smry_files/NORNE_S1.ESMRY");
+    Opm::EclIO::ExtESmry smry1("../tests/smry_files/NORNE_S1.ESMRY");
+
+    Opm::EclIO::EclFile esmry2("../tests/smry_files/NORNE_S2.ESMRY");
+    Opm::EclIO::ExtESmry smry2("../tests/smry_files/NORNE_S2.ESMRY");
+
+    QDate d1;
+    QTime t1;
+
+    d1.setDate(2000,1,1);
+    t1.setHMS(0,0,0,0);
+
+    QDateTime until_dt;
+    until_dt.setTimeSpec(Qt::UTC);
+
+    until_dt.setDate(d1);
+    until_dt.setTime(t1);
+
+    // make esmry file from NORNE_S1.ESMRY with data from sos until 2000-01-01
+    make_esmry_from_esmry(esmry1, smry1, "TEST1.ESMRY", until_dt);
+
+    d1.setDate(1999,1,1);
+    until_dt.setDate(d1);
+
+    // make esmry file from NORNE_S2.ESMRY with data from sos until 1999-01-01
+    make_esmry_from_esmry(esmry2, smry2, "TEST2.ESMRY", until_dt);
+
+    // set up application, 2 summary files, make one chart with FOPR, xrange not set.
+    SmryAppl::input_list_type input_charts;
+    SmryAppl::loader_list_type loaders;
+
+    int num_files = 2;
+
+    std::vector<std::string> fname_list;
+    std::vector<FileType> file_type;
+
+    file_type.resize(num_files);
+    fname_list.resize(num_files);
+
+    fname_list[0] = "TEST1.ESMRY";
+    fname_list[1] = "TEST2.ESMRY";
+
+    file_type = { FileType::ESMRY, FileType::ESMRY };
+
+    std::string smry_vect = "FOPR";
+    std::string xrange_str = "";
+
+    std::unordered_map<int, std::unique_ptr<Opm::EclIO::ESmry>> esmry_loader;
+    std::unordered_map<int, std::unique_ptr<Opm::EclIO::ExtESmry>> ext_smry_loader;
+    std::vector<std::filesystem::path> smry_files;
+
+    // set up loaders and smry file system paths
+    smry_input(fname_list, file_type, esmry_loader, ext_smry_loader, smry_files);
+
+    // set up input_charts data type
+    QSum::chart_input_from_string(smry_vect, input_charts, file_type, esmry_loader, ext_smry_loader, max_number_of_charts, xrange_str);
+
+    // make loaders for smryAppl
+    loaders = std::make_tuple(smry_files, file_type, std::move(esmry_loader), std::move(ext_smry_loader));
+
+    // derived summary object for smryAP
+    std::unique_ptr<DerivedSmry> derived_smry;
+
+    SmryAppl window(fname_list, loaders, input_charts, derived_smry);
+
+    window.resize(1400, 700);
+
+    window.grab();
+
+    SmryXaxis* xaxis = window.get_smry_xaxis(0);
+    SmryYaxis* yaxis = window.get_smry_yaxis(0, 0);
+
+    QCOMPARE(chk_date_range(xaxis, 1997, 8, 2, 2000, 1, 1), true);
+    QCOMPARE(chk_yaxis_val_range(yaxis, 0.0, 35.0), true);
+
+
+    d1.setDate(1999,5,10);
+    until_dt.setDate(d1);
+
+    // rewrite of TEST2.ESMRY, now with data until 1999-05-10
+    make_esmry_from_esmry(esmry2, smry2, "TEST2.ESMRY", until_dt);
+
+    QLineEdit* cmdline = window.get_cmdline();
+
+    // reload data using command :r
+    QSum::add_cmd_line(":r", cmdline );
+
+    // reload function will delete and make a new xaxis and yaxis object, need to get these again
+    xaxis = window.get_smry_xaxis(0);
+    yaxis = window.get_smry_yaxis(0, 0);
+
+    // none of the axis are changed
+    QCOMPARE(chk_date_range(xaxis, 1997, 8, 2, 2000, 1, 1), true);
+    QCOMPARE(chk_yaxis_val_range(yaxis, 0.0, 35.0), true);
+
+    QSum::add_cmd_line(":xrange 1999 2000", cmdline );
+
+    // axis set to new xrange
+    QCOMPARE(chk_date_range(xaxis, 1999, 1, 1, 2000, 1, 1), true);
+    QCOMPARE(chk_yaxis_val_range(yaxis, 0.0, 35.0), true);
+
+    d1.setDate(1999,8,17);
+    until_dt.setDate(d1);
+
+    make_esmry_from_esmry(esmry2, smry2, "TEST2.ESMRY", until_dt);
+    QSum::add_cmd_line(":r", cmdline );
+
+    // reload function will delete and make a new xaxis and yaxis object, need to get these again
+    xaxis = window.get_smry_xaxis(0);
+    yaxis = window.get_smry_yaxis(0, 0);
+
+    // none of the axis should be changed
+    QCOMPARE(chk_date_range(xaxis, 1999, 1, 1, 2000, 1, 1), true);
+    QCOMPARE(chk_yaxis_val_range(yaxis, 0.0, 35.0), true);
+
+    d1.setDate(2001,6,1);
+    until_dt.setDate(d1);
+
+    make_esmry_from_esmry(esmry1, smry1, "TEST1.ESMRY", until_dt);
+    QSum::add_cmd_line(":r", cmdline );
+
+    // reload function will delete and make a new xaxis and yaxis object, need to get these again
+    xaxis = window.get_smry_xaxis(0);
+    yaxis = window.get_smry_yaxis(0, 0);
+
+    // none of the axis should be changed
+    QCOMPARE(chk_date_range(xaxis, 1999, 1, 1, 2000, 1, 1), true);
+    QCOMPARE(chk_yaxis_val_range(yaxis, 0.0, 35.0), true);
+
+    // reset axis to full range from xrange previously set with :xrange
+    QTest::keyEvent(QTest::Click, &window, Qt::Key_R, Qt::ControlModifier);
+
+
+    // xrange should now be full range, max dt increased to 2001-6-1 in previous step
+    QCOMPARE(chk_date_range(xaxis, 1997, 8, 2, 2001, 6, 1), true);
+    QCOMPARE(chk_yaxis_val_range(yaxis, 0.0, 40.0), true);
+
+
+    d1.setDate(2002,8,1);
+    until_dt.setDate(d1);
+
+    make_esmry_from_esmry(esmry1, smry1, "TEST1.ESMRY", until_dt);
+    QSum::add_cmd_line(":r", cmdline );
+
+    // reload function will delete and make a new xaxis and yaxis object, need to get these again
+    xaxis = window.get_smry_xaxis(0);
+    yaxis = window.get_smry_yaxis(0, 0);
+
+    // xrange should still be full range, max dt increased to 2002-8-1
+    QCOMPARE(chk_date_range(xaxis, 1997, 8, 2, 2002, 8, 1), true);
+    QCOMPARE(chk_yaxis_val_range(yaxis, 0.0, 40.0), true);
+
+
+    d1.setDate(2003,3,1);
+    until_dt.setDate(d1);
+
+    make_esmry_from_esmry(esmry1, smry1, "TEST1.ESMRY", until_dt);
+
+    // <ctrl> + <shift> + R for reload, command line not active
+    QTest::keyEvent(QTest::Click, &window, Qt::Key_R, Qt::ControlModifier | Qt::ShiftModifier);
+
+    // reload function will delete and make a new xaxis and yaxis object, need to get these again
+    xaxis = window.get_smry_xaxis(0);
+    yaxis = window.get_smry_yaxis(0, 0);
+
+    // xrange should still be full range, max dt increased to 2003-3-1
+    QCOMPARE(chk_date_range(xaxis, 1997, 8, 2, 2003, 3, 1), true);
+    QCOMPARE(chk_yaxis_val_range(yaxis, 0.0, 40.0), true);
+
+
+    d1.setDate(2003,9,5);
+    until_dt.setDate(d1);
+
+    make_esmry_from_esmry(esmry1, smry1, "TEST1.ESMRY", until_dt);
+
+    // <ctrl> + <shift> + R for reload, command line active
+    QTest::keyEvent(QTest::Click, cmdline, Qt::Key_R, Qt::ControlModifier | Qt::ShiftModifier);
+
+    // reload function will delete and make a new xaxis and yaxis object, need to get these again
+    xaxis = window.get_smry_xaxis(0);
+    yaxis = window.get_smry_yaxis(0, 0);
+
+    // xrange should still be full range, max dt increased to 2003-3-1
+    QCOMPARE(chk_date_range(xaxis, 1997, 8, 2, 2003, 9, 5), true);
+    QCOMPARE(chk_yaxis_val_range(yaxis, 0.0, 40.0), true);
+
+    //window.grab().save("tmp6.png");
+}
+
 
 QTEST_MAIN(TestQsummary)
 
