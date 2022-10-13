@@ -247,7 +247,7 @@ void SmryAppl::create_charts_from_input ( const input_list_type& chart_input )
             vect_input = std::get<0>(chart_input[c]);
             std::string xrange_str = std::get<1>(chart_input[c]);
 
-            for ( size_t i=0; i < vect_input.size(); i++ ) {
+            for ( size_t i = 0; i < vect_input.size(); i++ ) {
                 int n = std::get<0> ( vect_input[i] );
                 std::string vect_name = std::get<1> ( vect_input[i] );
                 int axis_ind = std::get<2> ( vect_input[i] );
@@ -257,7 +257,11 @@ void SmryAppl::create_charts_from_input ( const input_list_type& chart_input )
                     std::cout << "!warning, not able to add series '" << vect_name <<"' for case ";
                     std::cout << root_name_list[n]  << "\n";
                 }
+
             }
+
+            if (series[c].size() > 0)
+                update_full_xrange(c);
 
             if (xrange_str.size() > 0) {
 
@@ -265,7 +269,6 @@ void SmryAppl::create_charts_from_input ( const input_list_type& chart_input )
                     std::cout << "!Warning, fail to set x-range for chart index: " << chart_ind << "\n";
                 else {
                     auto min_max_range = axisX[c]->get_xrange();
-                    //update_all_yaxis(min_max_range, c, true);  // should this be false ?
                     update_all_yaxis(min_max_range, c);  // should this be false ?
                 }
 
@@ -655,6 +658,7 @@ bool SmryAppl::add_new_series ( int chart_ind, int smry_ind, std::string vect_na
 
     // tskille: need something here to repaint the chart view.
     // this is not a good fix, but works for now
+    // this is causing an segmentation fault when used with delete series
 
     chart_view_list[chart_ind]->update_graphics();
 
@@ -1245,7 +1249,11 @@ void SmryAppl::delete_last_series()
         }
     }
 
-    this->update_chart_title_and_legend ( chart_ind );
+    if (series[chart_ind].size() > 0) {
+        auto min_max_range = axisX[chart_ind]->get_xrange();
+        update_all_yaxis(min_max_range, chart_ind);
+        this->update_chart_title_and_legend ( chart_ind );
+    }
 
     if ( ( series[chart_ind].size() == 0 ) && ( chart_ind == ( chartList.size() - 1 ) ) ) {
         lbl_plot->setText ( "new chart" );
@@ -2301,6 +2309,11 @@ void SmryAppl::keyPressEvent ( QKeyEvent *event )
                 this->add_cmd_to_hist(cmd_var);
                 this->reset_cmdline();
 
+            } else if ( cmd_var.substr ( 0,2 ) == ":t" ) {
+
+                std::cout << "<ctrl> + t \n";
+                axisX[chart_ind]->print_ranges();
+
             } else if (( cmd_var.substr ( 0,12 ) == ":ignore zero" ) ||
                        ( cmd_var.substr ( 0,4 ) == ":i z" )){
 
@@ -2395,17 +2408,40 @@ void SmryAppl::keyPressEvent ( QKeyEvent *event )
                     add_new_ens_series ( chart_ind, vect_name, axis_ind );
                 } else {
 
-                    add_new_series ( chart_ind, smry_ind, vect_name, axis_ind );
-                    auto min_max_range = axisX[chart_ind]->get_xrange();
+                    //if (series[chart_ind].size() > 0)
+                    //    axisX[chart_ind]->print_ranges();
 
+                    std::tuple<QDateTime,QDateTime> current_xrange;
+                    bool set_current = false;
+
+                    if ((series[chart_ind].size() > 0) && (!axisX[chart_ind]->has_full_range())) {
+                        current_xrange = axisX[chart_ind]->get_current_xrange();
+                        set_current = true;
+                        //auto from = std::get<0>(current_xrange);
+                        //auto to = std::get<1>(current_xrange);
+                        //std::cout << from.toString("yyyy-MM-dd HH:mm:ss.zzz").toStdString() << "\n";
+                        //std::cout << to.toString("yyyy-MM-dd HH:mm:ss.zzz").toStdString() << "\n";
+                    }
+
+                    add_new_series ( chart_ind, smry_ind, vect_name, axis_ind );
+
+                    update_full_xrange(chart_ind);
+
+                    if (set_current)
+                       axisX[chart_ind]->setRange(std::get<0>(current_xrange), std::get<1>(current_xrange));
+
+
+                    //std::cout << "This must be updated \n";
+
+                    auto min_max_range = axisX[chart_ind]->get_xrange();
+/*
                     if (std::get<0>(min_max_range) < 0){
                        //axisX[chart_ind]->reset_range();
                        min_max_range = axisX[chart_ind]->get_xrange();
                     }
 
                     min_max_range = axisX[chart_ind]->get_xrange();
-
-                    //axisX[chart_ind]->set_range(std::get<0>(min_max_range), std::get<1>(min_max_range));
+*/
                     update_all_yaxis(min_max_range, chart_ind);
                 }
 
@@ -2470,11 +2506,9 @@ void SmryAppl::keyPressEvent ( QKeyEvent *event )
 
     else if (m_smry_loaded && event->key() == Qt::Key_R &&  m_ctrl_key  && !m_shift_key && !m_alt_key) {
 
-        chartList[chart_ind]->zoomReset();
+        //chartList[chart_ind]->zoomReset();
 
         axisX[chart_ind]->resetAxisRange();
-
-        axisX[chart_ind]->reset_range();   // ?? needed
 
         auto min_max_range = axisX[chart_ind]->get_xrange();
 
@@ -2613,10 +2647,10 @@ void SmryAppl::handle_delete_series()
 
         delete_last_series();
 
-        // tskille: need something here to repaint the chart view.
-        // this is not a good fix, but works for now
-
-        chart_view_list[chart_ind]->update_graphics();
+        // tskille: This is causing an segmentation fault when
+        // first rubberband zoom, then delete series
+        // need something different
+        // chart_view_list[chart_ind]->update_graphics();
 
     } else {
 
@@ -2854,13 +2888,6 @@ void SmryAppl::print_pdf ( QString& fileName )
 
 void SmryAppl::update_all_yaxis(const std::tuple<double, double>& min_max_range, int c_ind, bool ignore_zero)
 {
-    const bool full_xrange = !axisX[c_ind]->has_xrange() ? true : false;
-
-    //std::cout << "in SmryAppl::update_all_yaxis(, full_xrange: " << std::boolalpha << full_xrange << "\n";
-    //std::cout << "xrange " << std::get<0>(min_max_range);
-    //std::cout << " -> " << std::get<1>(min_max_range) << "\n";
-
-
     for (size_t y = 0; y < axisY[c_ind].size(); y ++) {
 
         double f_min_y = std::numeric_limits<double>::max();
@@ -2872,45 +2899,23 @@ void SmryAppl::update_all_yaxis(const std::tuple<double, double>& min_max_range,
         for (size_t e = 0; e < series[c_ind].size(); e ++) {
             if (yaxis_map[series[c_ind][e]] == axisY[c_ind][y]) {
 
-                if (full_xrange) {
+                double xfrom = std::get<0>(min_max_range);
+                double xto = std::get<1>(min_max_range);
 
-                    std::tuple<double,double> full_yrange;
-                    full_yrange = series[chart_ind][e]->get_min_max_value(ignore_zero);
+                auto yrange = series[c_ind][e]->get_min_max_value(xfrom, xto, ignore_zero);
 
-                    if (std::get<0>(full_yrange) < f_min_y)
-                        f_min_y = std::get<0>(full_yrange);
+                if (std::get<0>(yrange) < min_y)
+                    min_y = std::get<0>(yrange);
 
-                    if (std::get<1>(full_yrange) > f_max_y)
-                        f_max_y = std::get<1>(full_yrange);
-                }
-
-                if (axisX[c_ind]->has_xrange()){
-
-                    double xfrom = std::get<0>(min_max_range);
-                    double xto = std::get<1>(min_max_range);
-
-                    auto yrange = series[c_ind][e]->get_min_max_value(xfrom, xto, ignore_zero);
-
-                    if (std::get<0>(yrange) < min_y)
-                        min_y = std::get<0>(yrange);
-
-                    if (std::get<1>(yrange) > max_y)
-                        max_y = std::get<1>(yrange);
-                }
+                if (std::get<1>(yrange) > max_y)
+                    max_y = std::get<1>(yrange);
             }
         }
 
-        if (full_xrange) {
-            adjust_yaxis_props(axisY[c_ind][y], f_min_y, f_max_y);
-            axisY[c_ind][y]-> setMinAndMax ( f_min_y, f_max_y );
-        }
-
-        if (axisX[c_ind]->has_xrange()){
-            adjust_yaxis_props(axisY[c_ind][y], min_y, max_y);
-        }
+        adjust_yaxis_props(axisY[c_ind][y], min_y, max_y);
+        axisY[c_ind][y]-> setMinAndMax ( f_min_y, f_max_y );
     }
 }
-
 
 SmryYaxis* SmryAppl::get_smry_yaxis(int chart_ind, int axis_ind)
 {
@@ -2920,4 +2925,24 @@ SmryYaxis* SmryAppl::get_smry_yaxis(int chart_ind, int axis_ind)
 std::vector<SmrySeries*> SmryAppl::get_smry_series(int chart_ind)
 {
     return series[chart_ind];
+}
+
+void SmryAppl::update_full_xrange(int chart_index)
+{
+    auto xrange = series[chart_index][0]->get_min_max_xrange();
+    double min_x = std::get<0>(xrange);
+    double max_x = std::get<1>(xrange);
+
+    for ( size_t i = 1; i < series[chart_index].size(); i++ ) {
+
+        xrange = series[chart_index][i]->get_min_max_xrange();
+
+        if (std::get<0>(xrange) < min_x)
+            min_x = std::get<0>(xrange);
+
+        if (std::get<1>(xrange) > max_x)
+            max_x = std::get<1>(xrange);
+    }
+
+    axisX[chart_index]->set_full_range(min_x, max_x);
 }

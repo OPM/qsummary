@@ -37,11 +37,14 @@ SmryXaxis::SmryXaxis(ChartView *chart_view, QObject *parent)
     m_dt_min_utc.setTimeSpec(Qt::UTC);
     m_dt_max_utc.setTimeSpec(Qt::UTC);
 
-    QDateTime xrange_from;
     xrange_from.setTimeSpec(Qt::UTC);
-
-    QDateTime xrange_to;
     xrange_to.setTimeSpec(Qt::UTC);
+
+    full_xrange_from.setTimeSpec(Qt::UTC);
+    full_xrange_to.setTimeSpec(Qt::UTC);
+
+    //QDateTime full_xrange_from;
+    //QDateTime full_xrange_to;
 
     xrange_set = false;
 
@@ -656,28 +659,68 @@ void SmryXaxis::rangeChanged(QDateTime min, QDateTime max)
 }
 
 
-std::tuple<double, double> SmryXaxis::get_xrange(bool full_range)
+std::tuple<double, double> SmryXaxis::get_xrange()
 {
-    if ((!xrange_set) || (full_range))
-        return std::make_tuple(static_cast<double>(m_dt_min_utc.toMSecsSinceEpoch()),
+    return std::make_tuple(static_cast<double>(m_dt_min_utc.toMSecsSinceEpoch()),
                                static_cast<double>(m_dt_max_utc.toMSecsSinceEpoch()));
-    else
-        return std::make_tuple(static_cast<double>(xrange_from.toMSecsSinceEpoch()),
-                               static_cast<double>(xrange_to.toMSecsSinceEpoch()));
-
-
 }
+
+void SmryXaxis::set_full_range(double minx, double maxx)
+{
+    QDate d1;
+    QTime t1;
+
+    d1.setDate(1970,1,1);
+    t1.setHMS(0,0,0,0);
+
+    full_xrange_from.setDate(d1);
+    full_xrange_from.setTime(t1);
+    full_xrange_from = full_xrange_from.addMSecs(static_cast<qint64>(minx));
+
+    full_xrange_to.setDate(d1);
+    full_xrange_to.setTime(t1);
+    full_xrange_to = full_xrange_to.addMSecs(static_cast<qint64>(maxx));
+
+    this->setRange(full_xrange_from, full_xrange_to);
+}
+
 
 void SmryXaxis::resetAxisRange()
 {
-    this->setRange(m_dt_min_utc, m_dt_max_utc);
+    if ((xrange_set) && (m_dt_min_utc == full_xrange_from) && (m_dt_max_utc == full_xrange_to))
+        this->setRange(xrange_from, xrange_to);
+    else if ((xrange_set) && (m_dt_min_utc > xrange_from) && (m_dt_max_utc < xrange_to))
+        this->setRange(xrange_from, xrange_to);
+    else
+        this->setRange(full_xrange_from, full_xrange_to);
 }
 
-void SmryXaxis::reset_range()
+void SmryXaxis::print_ranges()
 {
-    xrange_from = m_dt_min_utc;
-    xrange_to = m_dt_max_utc;
+    std::cout << "Full xrange  : ";
+    std::cout << full_xrange_from.toString("yyyy-MM-dd HH:mm:ss.zzz").toStdString();
+    std::cout << " -> " << full_xrange_to.toString("yyyy-MM-dd HH:mm:ss.zzz").toStdString() << "\n";
 
-    xrange_set = false;
+    std::cout << "xrange set   : ";
+    std::cout << xrange_from.toString("yyyy-MM-dd HH:mm:ss.zzz").toStdString();
+    std::cout << " -> " << xrange_to.toString("yyyy-MM-dd HH:mm:ss.zzz").toStdString() << "\n";
+
+    std::cout << "m_dt_utc set : ";
+    std::cout << m_dt_min_utc.toString("yyyy-MM-dd HH:mm:ss.zzz").toStdString();
+    std::cout << " -> " << m_dt_max_utc.toString("yyyy-MM-dd HH:mm:ss.zzz").toStdString() << "\n";
 
 }
+
+bool SmryXaxis::has_full_range()
+{
+    if ((m_dt_min_utc == full_xrange_from) && (m_dt_max_utc == full_xrange_to))
+        return true;
+    else
+        return false;
+}
+
+std::tuple<QDateTime, QDateTime> SmryXaxis::get_current_xrange()
+{
+    return std::make_tuple(m_dt_min_utc, m_dt_max_utc);
+}
+

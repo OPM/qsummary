@@ -43,6 +43,8 @@ public:
     std::tuple<double,double> get_min_max_value(double xfrom, double xto, bool ignore_zero = false);
     std::tuple<double,double> get_min_max_value(bool ignore_zero);
 
+    std::tuple<double,double> get_min_max_xrange() { return std::make_tuple(m_glob_min_x, m_glob_max_x); };
+
     //std::tuple<double,double> get_min_max_value(bool ignore_zero);
 
     bool all_values_zero();
@@ -62,6 +64,9 @@ private:
 
      double m_glob_min;
      double m_glob_max;
+
+     double m_glob_min_x;
+     double m_glob_max_x;
 };
 
 
