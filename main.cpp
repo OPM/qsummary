@@ -96,6 +96,8 @@ static void printHelp()
     std::cout << " <ctrl> + <delete>   delete active chart  \n";
     std::cout << " <page down>   next chart, create new if last chart already active  \n";
     std::cout << " <page down>   previous chart  \n";
+    std::cout << " <home>   first chart  \n";
+    std::cout << " <end>   last chart  \n";
     std::cout << " <down>  previous summary vector or previous command  \n";
     std::cout << " <up>  next summary vector or next command  \n";
     std::cout << "\n\n";
