@@ -242,6 +242,8 @@ private:
 
     void update_full_xrange(int chart_index);
 
+    void select_first_chart();
+    void select_last_chart();
 };
 
 #endif

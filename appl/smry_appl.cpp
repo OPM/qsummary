@@ -1949,6 +1949,18 @@ bool SmryAppl::eventFilter ( QObject *object, QEvent *event )
 
             return true;
 
+        } else if (m_smry_loaded && (keyEvent->key() == Qt::Key_Home)) {
+            // User pressed 'Home'.  Go to first chart in series.
+            this->select_first_chart();
+
+            return true;
+
+        } else if (m_smry_loaded && (keyEvent->key() == Qt::Key_End)) {
+            // User pressed 'End'.  Go to last chart in series.
+            this->select_last_chart();
+
+            return true;
+
         } else if ( keyEvent->key()  == Qt::Key_Z  &&  m_ctrl_key  && !m_shift_key && !m_alt_key ) {
 
             auto min_max_range = axisX[chart_ind]->get_xrange();
@@ -2570,20 +2582,12 @@ void SmryAppl::keyPressEvent ( QKeyEvent *event )
 
     else if (m_smry_loaded && (event->key() == Qt::Key_Home)) {
         // User pressed 'Home'.  Go to first chart in series.
-        chart_ind = 0;
-
-        stackedWidget->setCurrentIndex(chart_ind);
-
-        this->update_chart_labels();
+        this->select_first_chart();
     }
 
     else if (m_smry_loaded && (event->key() == Qt::Key_End)) {
         // User pressed 'End'.  Go to last chart in series.
-        chart_ind = static_cast<int>(chartList.size()) - 1;
-
-        stackedWidget->setCurrentIndex(chart_ind);
-
-        this->update_chart_labels();
+        this->select_last_chart();
     }
 
     else if ( m_smry_loaded && event->key() == Qt::Key_F  &&  m_ctrl_key  && !m_shift_key && !m_alt_key ){
@@ -2964,4 +2968,20 @@ void SmryAppl::update_full_xrange(int chart_index)
     }
 
     axisX[chart_index]->set_full_range(min_x, max_x);
+}
+
+void SmryAppl::select_first_chart()
+{
+    this->chart_ind = 0;
+    this->stackedWidget->setCurrentIndex(this->chart_ind);
+
+    this->update_chart_labels();
+}
+
+void SmryAppl::select_last_chart()
+{
+    this->chart_ind = static_cast<int>(this->chartList.size()) - 1;
+    stackedWidget->setCurrentIndex(this->chart_ind);
+
+    this->update_chart_labels();
 }
