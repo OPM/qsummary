@@ -685,6 +685,8 @@ void SmryXaxis::set_full_range(double minx, double maxx)
 }
 
 
+
+
 void SmryXaxis::resetAxisRange()
 {
     if ((xrange_set) && (m_dt_min_utc == full_xrange_from) && (m_dt_max_utc == full_xrange_to))
@@ -697,13 +699,17 @@ void SmryXaxis::resetAxisRange()
 
 void SmryXaxis::print_ranges()
 {
+    std::cout << "xrange_set   : " << std::boolalpha << xrange_set << std::endl;
+
     std::cout << "Full xrange  : ";
     std::cout << full_xrange_from.toString("yyyy-MM-dd HH:mm:ss.zzz").toStdString();
     std::cout << " -> " << full_xrange_to.toString("yyyy-MM-dd HH:mm:ss.zzz").toStdString() << "\n";
 
-    std::cout << "xrange set   : ";
-    std::cout << xrange_from.toString("yyyy-MM-dd HH:mm:ss.zzz").toStdString();
-    std::cout << " -> " << xrange_to.toString("yyyy-MM-dd HH:mm:ss.zzz").toStdString() << "\n";
+    if ((!xrange_from.isNull()) && (!xrange_to.isNull())) {
+        std::cout << "xrange set   : ";
+        std::cout << xrange_from.toString("yyyy-MM-dd HH:mm:ss.zzz").toStdString();
+        std::cout << " -> " << xrange_to.toString("yyyy-MM-dd HH:mm:ss.zzz").toStdString() << "\n";
+    }
 
     std::cout << "m_dt_utc set : ";
     std::cout << m_dt_min_utc.toString("yyyy-MM-dd HH:mm:ss.zzz").toStdString();
@@ -724,3 +730,39 @@ std::tuple<QDateTime, QDateTime> SmryXaxis::get_current_xrange()
     return std::make_tuple(m_dt_min_utc, m_dt_max_utc);
 }
 
+std::vector<QDateTime> SmryXaxis::get_xrange_state()
+{
+    return {m_dt_min_utc, m_dt_max_utc, xrange_from, xrange_to, full_xrange_from, full_xrange_to};
+}
+
+void SmryXaxis::set_xrange_state(const std::vector<QDateTime>& xrange_state)
+{
+    m_dt_min_utc = xrange_state[0];
+    m_dt_max_utc = xrange_state[1];
+
+    xrange_from = xrange_state[2];
+    xrange_to = xrange_state[3];
+
+    if ((xrange_from.isNull()) || (xrange_to.isNull()))
+        xrange_set = false;
+    else
+        xrange_set = true;
+
+    full_xrange_from = xrange_state[4];
+    full_xrange_to = xrange_state[5];
+
+    this->setRange(m_dt_min_utc, m_dt_max_utc);
+}
+
+void SmryXaxis::print_xrange_state()
+{
+    std::cout << "m_dt_min_utc    : " << m_dt_min_utc.toString("yyyy-MM-dd HH:mm:ss.zzz").toStdString() << std::endl;
+    std::cout << "m_dt_max_utc    : " << m_dt_max_utc.toString("yyyy-MM-dd HH:mm:ss.zzz").toStdString() << std::endl;
+
+    std::cout << "xrange_from     : " << xrange_from.toString("yyyy-MM-dd HH:mm:ss.zzz").toStdString() << std::endl;
+    std::cout << "xrange_to       : " << xrange_to.toString("yyyy-MM-dd HH:mm:ss.zzz").toStdString() << std::endl;
+
+    std::cout << "full_xrange_from: " << full_xrange_from.toString("yyyy-MM-dd HH:mm:ss.zzz").toStdString() << std::endl;
+    std::cout << "full_xrange_to  : " << full_xrange_to.toString("yyyy-MM-dd HH:mm:ss.zzz").toStdString() << std::endl;
+    std::cout << "\n";
+}

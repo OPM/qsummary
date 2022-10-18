@@ -39,12 +39,15 @@ public:
     void set_xrange(bool value) { xrange_set = value; }
 
     bool has_full_range();
-    
+
     void resetAxisRange();
     void print_ranges();
 
     std::tuple<double, double> get_xrange();
     std::tuple<QDateTime, QDateTime> get_current_xrange();
+    std::vector<QDateTime> get_xrange_state();
+    void set_xrange_state(const std::vector<QDateTime>& xrange_state);
+    void print_xrange_state();
 
 
 private slots:

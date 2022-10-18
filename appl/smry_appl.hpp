@@ -192,7 +192,9 @@ private:
                           bool ignore_zero = false);
 
     void update_chart_title_and_legend(int chart_ind);
-    void reload_and_update_charts();
+    bool reload_and_update_charts();
+    void reset_axis_state(const std::vector<std::vector<QDateTime>>& xrange_state);
+
     void delete_last_series();
 
     std::vector<std::string> make_well_list(int chart_ind, const std::string& filt);
@@ -227,7 +229,7 @@ private:
     void handle_delete_series();
 
     template <typename T>
-    void reopen_loader(int n, std::unique_ptr<T>& smry, const std::filesystem::path& smryfile);
+    bool reopen_loader(int n, std::unique_ptr<T>& smry, const std::filesystem::path& smryfile);
 
     bool has_smry_vect(int smry_ind, const std::string& keystr);
     const std::vector<float>& get_smry_vect(int case_ind, std::string& keystr);
@@ -244,6 +246,8 @@ private:
 
     void select_first_chart();
     void select_last_chart();
+
+    std::tuple<QDateTime, QDateTime> calc_min_max_dt(int chart_ind);
 };
 
 #endif
