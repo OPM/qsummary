@@ -64,15 +64,22 @@ add_executable(smryappl
     tests/test_smry_appl.cpp
     )
 
+add_executable(sep_folders
+    appl/qsum_func_lib.hpp
+    tests/test_sep_folders.cpp
+    )
+
 
 add_test(NAME cmdf_define COMMAND cmdf_define)
 add_test(NAME cmdf_input_chart COMMAND cmdf_input_chart)
 add_test(NAME scale_yaxis COMMAND scale_yaxis)
 add_test(NAME smryappl COMMAND smryappl)
+add_test(NAME sep_folders COMMAND sep_folders)
 
 
 target_link_libraries(cmdf_define PRIVATE smry_appl Qt5::Test Qt5::Core Qt5::Widgets Qt5::Charts stdc++fs)
 target_link_libraries(cmdf_input_chart PRIVATE smry_appl Qt5::Test Qt5::Core Qt5::Widgets Qt5::Charts stdc++fs)
 target_link_libraries(scale_yaxis PRIVATE smry_appl Qt5::Test Qt5::Core Qt5::Widgets Qt5::Charts stdc++fs)
 target_link_libraries(smryappl PRIVATE smry_appl Qt5::Test Qt5::Core Qt5::Widgets Qt5::Charts stdc++fs)
+target_link_libraries(sep_folders PRIVATE smry_appl Qt5::Test Qt5::Core Qt5::Widgets Qt5::Charts stdc++fs)
 

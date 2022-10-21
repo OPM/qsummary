@@ -216,7 +216,7 @@ void QSum::remove_zero_vect(const std::vector<std::filesystem::path>& smry_files
 }
 
 SmryAppl::input_list_type QSum::charts_separate_folders(const std::vector<std::filesystem::path>& smry_files,
-                                                   SmryAppl::input_list_type input_charts)
+                                                   const SmryAppl::input_list_type& input_charts)
 {
     SmryAppl::input_list_type updated_chart_input;
     std::vector<std::string> folderList;
@@ -229,40 +229,51 @@ SmryAppl::input_list_type QSum::charts_separate_folders(const std::vector<std::f
     std::vector<std::vector<int>> smry_ind_vect;
     std::vector<std::vector<std::string>> key_vect;
     std::vector<std::string> xrange_str_vect;
+    std::vector<std::string> f_list;
 
     for (auto element: input_charts) {
 
         auto series_vector = std::get<0>(element);
         auto xrange_str = std::get<1>(element);
 
-        std::vector<std::string> flist;
-        int cur_smry_ind;
 
         for (size_t n = 0; n < series_vector.size(); n++) {
             int smry_ind = std::get<0>(series_vector[n]);
+            std::string folder = folderList[smry_ind];
+
+            int chart_index;
 
             if (n == 0) {
                 smry_ind_vect.push_back({});
                 key_vect.push_back({});
                 xrange_str_vect.push_back(xrange_str);
+                f_list.push_back(folder);
+
+                chart_index = 0;
 
             } else {
-                if ((smry_ind != cur_smry_ind) && (folderList[smry_ind] != folderList[cur_smry_ind])) {
-                    cind++;
+
+                auto it = std::find(f_list.begin(), f_list.end(), folder);
+
+                if (it != f_list.end()) {
+                    chart_index = std::distance(f_list.begin(), it);
+                } else {
+                    f_list.push_back(folder);
                     smry_ind_vect.push_back({});
                     key_vect.push_back({});
                     xrange_str_vect.push_back(xrange_str);
+
+                    chart_index = smry_ind_vect.size() - 1;
                 }
             }
 
-            smry_ind_vect.back().push_back(std::get<0>(series_vector[n]));
-            key_vect.back().push_back(std::get<1>(series_vector[n]));
-
-            cur_smry_ind = smry_ind;
+            smry_ind_vect[chart_index].push_back(std::get<0>(series_vector[n]));
+            key_vect[chart_index].push_back(std::get<1>(series_vector[n]));
         }
 
         cind++;
     }
+
 
     for (size_t c = 0; c < smry_ind_vect.size(); c++){
 
@@ -373,19 +384,20 @@ void QSum::print_input_charts(const SmryAppl::input_list_type& input_charts)
 
     for ( size_t c = 0; c < input_charts.size(); c++ ) {
 
-        std::cout << "chart : " << c << std::endl;
-
         std::vector<SmryAppl::vect_input_type> vect_input;
         vect_input = std::get<0>(input_charts[c]);
-
         auto xstr = std::get<1>(input_charts[c]);
+
+        std::cout << "chart : " << c << " xrange_str ='" << xstr << "'" << std::endl;
 
         for ( size_t i=0; i < vect_input.size(); i++ ) {
             int n = std::get<0> ( vect_input[i] );
             std::string vect_name = std::get<1> ( vect_input[i] );
+            int axis_ind = std::get<2> ( vect_input[i] );
             bool is_derived = std::get<3> ( vect_input[i] );
 
             std::cout << "smry_ind= " << n << " > vect_name: " << vect_name << "  ";
+            std::cout << " > axis_ind: '" << axis_ind << "'  ";
             std::cout << std::boolalpha << is_derived;
             std::cout << " | " << xstr ;
             std::cout << std::endl;
