@@ -62,7 +62,7 @@ void remove_zero_vect(const std::vector<std::filesystem::path>& smry_files,
 
 
 SmryAppl::input_list_type charts_separate_folders(const std::vector<std::filesystem::path>& smry_files,
-        SmryAppl::input_list_type input_charts);
+        const SmryAppl::input_list_type& input_charts);
 
 
 template <typename T>
