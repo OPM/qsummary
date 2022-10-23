@@ -2710,9 +2710,12 @@ void SmryAppl::keyPressEvent ( QKeyEvent *event )
 
     else if ( m_smry_loaded && event->key() == Qt::Key_P  &&  m_ctrl_key  && !m_shift_key && !m_alt_key ){
 
+        // The DontUseNativeDialog option is used to ensure that the widget-based implementation will 
+        // be used instead of the native dialog. Freeze when using nativeDialog on Linux RH7 distribution in Equinor.  
+
         QString fileName = QFileDialog::getSaveFileName ( this, tr ( "Save File" ),
                            QDir::currentPath(),
-                           tr ( "Pdf (*.pdf)" ) );
+                           tr ( "Pdf (*.pdf)" ) ,0 , QFileDialog::DontUseNativeDialog );
 
         this->print_pdf ( fileName );
     }
