@@ -193,7 +193,7 @@ private:
 
     void update_chart_title_and_legend(int chart_ind);
     bool reload_and_update_charts();
-    void reset_axis_state(const std::vector<std::vector<QDateTime>>& xrange_state);
+    void reset_axis_state(int chart_index, const std::vector<std::vector<QDateTime>>& xrange_state);
 
     void delete_last_series();
 

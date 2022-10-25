@@ -1102,38 +1102,35 @@ bool SmryAppl::reopen_loader(int n, std::unique_ptr<T>& smry, const std::filesys
     return updated;
 }
 
-void SmryAppl::reset_axis_state(const std::vector<std::vector<QDateTime>>& xrange_state)
+void SmryAppl::reset_axis_state(int chart_index, const std::vector<std::vector<QDateTime>>& xrange_state)
 {
     size_t num_charts = xrange_state.size();
 
-    for (size_t c = 0; c <  num_charts; c++){
+    QDateTime dt_min_utc = xrange_state[chart_index][0];
+    QDateTime dt_max_utc = xrange_state[chart_index][1];
+    QDateTime xr_from = xrange_state[chart_index][2];
+    QDateTime xr_to = xrange_state[chart_index][3];
+    QDateTime full_xr_from = xrange_state[chart_index][4];
+    QDateTime full_xr_to = xrange_state[chart_index][5];
 
-        QDateTime dt_min_utc = xrange_state[c][0];
-        QDateTime dt_max_utc = xrange_state[c][1];
-        QDateTime xr_from = xrange_state[c][2];
-        QDateTime xr_to = xrange_state[c][3];
-        QDateTime full_xr_from = xrange_state[c][4];
-        QDateTime full_xr_to = xrange_state[c][5];
+    bool full_range = false;
 
-        bool full_range = false;
+    if ((dt_min_utc == full_xr_from) && (dt_max_utc == full_xr_to))
+        full_range = true;
 
-        if ((dt_min_utc == full_xr_from) && (dt_max_utc == full_xr_to))
-            full_range = true;
+    auto full_xrange = calc_min_max_dt(chart_index);
+    full_xr_from = std::get<0>(full_xrange);
+    full_xr_to = std::get<1>(full_xrange);
 
-        auto full_xrange = calc_min_max_dt(c);
-        full_xr_from = std::get<0>(full_xrange);
-        full_xr_to = std::get<1>(full_xrange);
-
-        if (full_range){
-            dt_min_utc = full_xr_from;
-            dt_max_utc = full_xr_to;
-        }
-
-        std::vector<QDateTime> mod_xrange_state;
-        mod_xrange_state = {dt_min_utc, dt_max_utc, xr_from, xr_to, full_xr_from, full_xr_to};
-
-        axisX[c]->set_xrange_state(mod_xrange_state);
+    if (full_range) {
+        dt_min_utc = full_xr_from;
+        dt_max_utc = full_xr_to;
     }
+
+    std::vector<QDateTime> mod_xrange_state;
+    mod_xrange_state = {dt_min_utc, dt_max_utc, xr_from, xr_to, full_xr_from, full_xr_to};
+
+    axisX[chart_index]->set_xrange_state(mod_xrange_state);
 }
 
 
@@ -1220,7 +1217,7 @@ bool SmryAppl::reload_and_update_charts()
             add_new_series ( ind, smry_ind, vect_name, vaxis_ind, is_derived);
         }
 
-        this->reset_axis_state(xrange_state);
+        this->reset_axis_state(ind, xrange_state);
 
         auto min_max_range = axisX[ind]->get_xrange();
         update_all_yaxis(min_max_range, ind);
@@ -2710,8 +2707,8 @@ void SmryAppl::keyPressEvent ( QKeyEvent *event )
 
     else if ( m_smry_loaded && event->key() == Qt::Key_P  &&  m_ctrl_key  && !m_shift_key && !m_alt_key ){
 
-        // The DontUseNativeDialog option is used to ensure that the widget-based implementation will 
-        // be used instead of the native dialog. Freeze when using nativeDialog on Linux RH7 distribution in Equinor.  
+        // The DontUseNativeDialog option is used to ensure that the widget-based implementation will
+        // be used instead of the native dialog. Freeze when using nativeDialog on Linux RH7 distribution in Equinor.
 
         QString fileName = QFileDialog::getSaveFileName ( this, tr ( "Save File" ),
                            QDir::currentPath(),

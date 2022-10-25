@@ -864,7 +864,7 @@ void TestQsummary::test_reload_1()
 
     file_type = { FileType::ESMRY, FileType::ESMRY };
 
-    std::string smry_vect = "FOPR";
+    std::string smry_vect = "FOPR,FWCT";
     std::string xrange_str = "";
 
     std::unordered_map<int, std::unique_ptr<Opm::EclIO::ESmry>> esmry_loader;
