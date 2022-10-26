@@ -1230,7 +1230,8 @@ bool SmryAppl::reload_and_update_charts()
             for ( int c = 0; c < num_charts; c++ )
                 for ( size_t m = 0; m < series_properties[c].size(); m++ )
                     if (std::get<0> ( series_properties[c][m] ) == n)
-                        pre_load_list.push_back(std::get<1> ( series_properties[c][m] ));
+                        if (!std::get<3> ( series_properties[c][m] ))
+                            pre_load_list.push_back(std::get<1> ( series_properties[c][m] ));
 
             if (m_file_type[n] == FileType::SMSPEC)
                 m_esmry_loader[n]->loadData(pre_load_list);
