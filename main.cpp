@@ -258,11 +258,23 @@ int main(int argc, char *argv[])
 
         if (ext == ".SMSPEC") {
             file_type[n] = FileType::SMSPEC;
-            esmry_vect[n] = std::make_unique<Opm::EclIO::ESmry>(filename);
+
+            try {
+                esmry_vect[n] = std::make_unique<Opm::EclIO::ESmry>(filename);
+            } catch (...){
+                std::string message = "Error opening SMSPEC file " + filename.string() + " in main function";
+                throw std::runtime_error(message);
+            }
 
         }  else if (ext == ".ESMRY") {
             file_type[n] = FileType::ESMRY;
-            lodsmry_vect[n] = std::make_unique<Opm::EclIO::ExtESmry>(filename);
+
+            try {
+                lodsmry_vect[n] = std::make_unique<Opm::EclIO::ExtESmry>(filename);
+            } catch (...){
+                std::string message = "Error opening ESMRY file " + filename.string() + " in main function";
+                throw std::runtime_error(message);
+            }
         }
     }
 

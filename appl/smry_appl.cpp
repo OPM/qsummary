@@ -386,12 +386,28 @@ bool SmryAppl::add_new_series ( int chart_ind, int smry_ind, std::string vect_na
 
         } else if (m_file_type[smry_ind] == FileType::SMSPEC){
             hasVect = m_esmry_loader[smry_ind]->hasKey(vect_name);
-            datav = m_esmry_loader[smry_ind]->get ( vect_name );
+
+            try {
+                datav = m_esmry_loader[smry_ind]->get ( vect_name );
+            } catch (...){
+                std::string message;
+                message = "Error loading " + vect_name + " from SMSPEC/UNSMRY " + m_esmry_loader[smry_ind]->rootname();
+                throw std::runtime_error(message);
+            }
+
             smry_unit = m_esmry_loader[smry_ind]->get_unit ( vect_name );
 
         } else if (m_file_type[smry_ind] == FileType::ESMRY){
             hasVect = m_ext_esmry_loader[smry_ind]->hasKey(vect_name);
-            datav = m_ext_esmry_loader[smry_ind]->get ( vect_name );
+
+            try {
+                datav = m_ext_esmry_loader[smry_ind]->get ( vect_name );
+            } catch (...) {
+                std::string message;
+                message = "Error loading " + vect_name + " from ESMRY " + m_ext_esmry_loader[smry_ind]->rootname();
+                throw std::runtime_error(message);
+            }
+
             smry_unit = m_ext_esmry_loader[smry_ind]->get_unit ( vect_name );
         }
 
@@ -437,10 +453,6 @@ bool SmryAppl::add_new_series ( int chart_ind, int smry_ind, std::string vect_na
     }
 
     QDateTime dt_start_sim(d1, tm1, Qt::UTC);
-
-    //dt_start_sim.setTimeSpec(Qt::UTC);
-    //dt_start_sim.setDate ( d1 );
-    //dt_start_sim.setTime ( tm1 );
 
     vectorEntry ve = make_vector_entry ( vect_name );
 
@@ -1076,7 +1088,13 @@ template <typename T>
 bool SmryAppl::reopen_loader(int n, std::unique_ptr<T>& smry, const std::filesystem::path& smryfile)
 {
     std::unique_ptr<T> smry_tmp;
-    smry_tmp = std::make_unique<T> ( m_smry_files[n] );
+
+    try {
+        smry_tmp = std::make_unique<T> ( m_smry_files[n] );
+    } catch (...) {
+        std::string message = "Error with reopen loader, failed when opening summary file " + smryfile.string();
+        throw std::runtime_error(message);
+    }
 
     auto nstep_tmp = smry_tmp->numberOfTimeSteps();
     auto nstep = smry->numberOfTimeSteps();
@@ -1140,18 +1158,20 @@ bool SmryAppl::reload_and_update_charts()
 
     vect_list.clear();
     bool need_update = false;
+    int n_smry = static_cast<int>(m_smry_files.size());
+    std::vector<bool> updated_list;
+    updated_list.resize(n_smry);
 
     for (size_t n = 0; n < m_smry_files.size(); n++){
 
         if (std::filesystem::exists(m_smry_files[n] )) {
 
-            bool updated;
             if (m_file_type[n] == FileType::SMSPEC)
-                updated = reopen_loader( n, m_esmry_loader[n], m_smry_files[n] );
+                updated_list[n] = reopen_loader( n, m_esmry_loader[n], m_smry_files[n] );
             else if (m_file_type[n] == FileType::ESMRY)
-                updated = reopen_loader( n, m_ext_esmry_loader[n], m_smry_files[n] );
+                updated_list[n] = reopen_loader( n, m_ext_esmry_loader[n], m_smry_files[n] );
 
-            if (updated)
+            if (updated_list[n])
                 need_update = true;
 
         } else {
@@ -1200,6 +1220,26 @@ bool SmryAppl::reload_and_update_charts()
         this->delete_chart(n);
         n--;
     }
+
+    // make_preload_list and load data if smry file is updated
+
+    for (int n = 0; n < n_smry ; n++) {
+        if (updated_list[n]) {
+            std::vector<std::string> pre_load_list = {"TIME"};
+
+            for ( int c = 0; c < num_charts; c++ )
+                for ( size_t m = 0; m < series_properties[c].size(); m++ )
+                    if (std::get<0> ( series_properties[c][m] ) == n)
+                        pre_load_list.push_back(std::get<1> ( series_properties[c][m] ));
+
+            if (m_file_type[n] == FileType::SMSPEC)
+                m_esmry_loader[n]->loadData(pre_load_list);
+            else if (m_file_type[n] == FileType::ESMRY)
+                m_ext_esmry_loader[n]->loadData(pre_load_list);
+        }
+    }
+
+    // create new charts
 
     for ( int ind = 0; ind < num_charts; ind++ ) {
 
@@ -2550,13 +2590,27 @@ void SmryAppl::keyPressEvent ( QKeyEvent *event )
 
             if (ext == ".SMSPEC") {
                 m_file_type.push_back(FileType::SMSPEC);
-                m_esmry_loader[smry_ind] = std::make_unique<Opm::EclIO::ESmry>(filename);
+
+                try {
+                    m_esmry_loader[smry_ind] = std::make_unique<Opm::EclIO::ESmry>(filename);
+                } catch (...) {
+                    std::string message = "Error with opening SMSPEC file " + filename.string();
+                    throw std::runtime_error(message);
+                }
+
                 root_name_list.push_back ( m_esmry_loader[smry_ind]->rootname() );
                 vect_list.push_back ( m_esmry_loader[smry_ind]->keywordList() );
 
             }  else if (ext == ".ESMRY") {
                 m_file_type.push_back(FileType::ESMRY);
-                m_ext_esmry_loader[smry_ind] = std::make_unique<Opm::EclIO::ExtESmry>(filename);
+
+                try {
+                    m_ext_esmry_loader[smry_ind] = std::make_unique<Opm::EclIO::ExtESmry>(filename);
+                } catch (...) {
+                    std::string message = "Error with opening ESMRY file " + filename.string();
+                    throw std::runtime_error(message);
+                }
+
                 root_name_list.push_back ( m_ext_esmry_loader[smry_ind]->rootname() );
                 vect_list.push_back ( m_ext_esmry_loader[smry_ind]->keywordList() );
             }
