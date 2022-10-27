@@ -70,8 +70,7 @@ void XaxisTicks::paint(QPainter *painter, const QStyleOptionGraphicsItem *option
             path3.moveTo(xpos, rect2.y());
             path3.lineTo(xpos, rect2.y() + rect2.height());
 
-            painter->setPen(QColor("light gray"));
-            painter->setPen(Qt::DotLine);
+            painter->setPen(QPen(Qt::gray, 0.5, Qt::SolidLine));
 
             painter->drawPath(path3);
 
