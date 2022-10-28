@@ -42,8 +42,8 @@ private slots:
     void test_scale_axis_vect_opt();
     void test_scale_axis_interactive_1();
     void test_scale_axis_interactive_2();
-
     void test_reload_1();
+    void test_reload_2();
 };
 
 const int max_number_of_charts = 2000;
@@ -161,8 +161,7 @@ bool chk_yaxis_val_range(SmryYaxis* yaxis, float y_from, float y_to)
     return true;
 }
 
-//void make_esmry_from_esmry(Opm::EclIO::EclFile& esmry, const std::string fname, int n_tsteps)
-//{
+
 void make_esmry_from_esmry(Opm::EclIO::EclFile& esmry, Opm::EclIO::ExtESmry& smry, const std::string fname, QDateTime to_dt)
 {
     // write all time steps with datetime less that to_dt
@@ -1007,8 +1006,174 @@ void TestQsummary::test_reload_1()
     QCOMPARE(chk_yaxis_val_range(yaxis, 0.0, 40.0), true);
 
     //window.grab().save("tmp6.png");
+
+    std::filesystem::path testf1(fname_list[0]);
+    std::filesystem::path testf2(fname_list[1]);
+
+    if (std::filesystem::exists(testf1))
+        std::filesystem::remove(testf1);
+
+    if (std::filesystem::exists(testf2))
+        std::filesystem::remove(testf2);
+
 }
 
+
+void TestQsummary::test_reload_2()
+{
+    Opm::EclIO::EclFile esmry1("../tests/smry_files/NORNE_S1.ESMRY");
+    Opm::EclIO::ExtESmry smry1("../tests/smry_files/NORNE_S1.ESMRY");
+
+    Opm::EclIO::EclFile esmry2("../tests/smry_files/NORNE_S2.ESMRY");
+    Opm::EclIO::ExtESmry smry2("../tests/smry_files/NORNE_S2.ESMRY");
+
+    QDate d1;
+    QTime t1;
+
+    d1.setDate(2000,1,1);
+    t1.setHMS(0,0,0,0);
+
+    QDateTime until_dt;
+    until_dt.setTimeSpec(Qt::UTC);
+
+    until_dt.setDate(d1);
+    until_dt.setTime(t1);
+
+    // make esmry file from NORNE_S1.ESMRY with data from sos until 2000-01-01
+    make_esmry_from_esmry(esmry1, smry1, "TEST1.ESMRY", until_dt);
+
+    d1.setDate(1999,1,1);
+    until_dt.setDate(d1);
+
+    // make esmry file from NORNE_S2.ESMRY with data from sos until 1999-01-01
+    make_esmry_from_esmry(esmry2, smry2, "TEST2.ESMRY", until_dt);
+
+    // set up application, 2 summary files, make one chart with FOPR, xrange not set.
+    SmryAppl::input_list_type input_charts;
+    SmryAppl::loader_list_type loaders;
+
+    int num_files = 2;
+
+    std::vector<std::string> fname_list;
+    std::vector<FileType> file_type;
+
+    file_type.resize(num_files);
+    fname_list.resize(num_files);
+
+    fname_list[0] = "TEST1.ESMRY";
+    fname_list[1] = "TEST2.ESMRY";
+
+    file_type = { FileType::ESMRY, FileType::ESMRY };
+
+    QsumCMDF cmdfile("../tests/cmd_files/test4a.txt", num_files, "");
+
+    cmdfile.make_charts_from_cmd(input_charts, "");
+
+    std::unordered_map<int, std::unique_ptr<Opm::EclIO::ESmry>> esmry_loader;
+    std::unordered_map<int, std::unique_ptr<Opm::EclIO::ExtESmry>> ext_smry_loader;
+    std::vector<std::filesystem::path> smry_files;
+
+    // set up loaders and smry file system paths
+    smry_input(fname_list, file_type, esmry_loader, ext_smry_loader, smry_files);
+
+    // derived summary object for smryAppl
+    std::unique_ptr<DerivedSmry> derived_smry;
+    derived_smry = std::make_unique<DerivedSmry>(cmdfile, file_type, esmry_loader, ext_smry_loader);
+
+    // make loaders for smryAppl
+    loaders = std::make_tuple(smry_files, file_type, std::move(esmry_loader), std::move(ext_smry_loader));
+
+
+    SmryAppl window(fname_list, loaders, input_charts, derived_smry);
+
+    window.resize(1400, 700);
+
+    window.grab();
+
+    QCOMPARE(window.number_of_charts(), 4);
+
+    SmryXaxis* xaxis = window.get_smry_xaxis(0);
+    QCOMPARE(chk_date_range(xaxis, 1998, 1, 2, 2000, 1, 1), true);
+
+    xaxis = window.get_smry_xaxis(1);
+    QCOMPARE(chk_date_range(xaxis, 1998, 1, 2, 2000, 1, 1), true);
+
+    xaxis = window.get_smry_xaxis(2);
+    QCOMPARE(chk_date_range(xaxis, 1997, 8, 2, 1999, 1, 1), true);
+
+    xaxis = window.get_smry_xaxis(3);
+    QCOMPARE(chk_date_range(xaxis, 1997, 8, 2, 1999, 1, 1), true);
+
+    // reload not needed, should do nothing
+
+    // <ctrl> + <shift> + R for reload, command line not active
+    QTest::keyEvent(QTest::Click, &window, Qt::Key_R, Qt::ControlModifier | Qt::ShiftModifier);
+
+    xaxis = window.get_smry_xaxis(0);
+    QCOMPARE(chk_date_range(xaxis, 1998, 1, 2, 2000, 1, 1), true);
+
+    xaxis = window.get_smry_xaxis(1);
+    QCOMPARE(chk_date_range(xaxis, 1998, 1, 2, 2000, 1, 1), true);
+
+    xaxis = window.get_smry_xaxis(2);
+    QCOMPARE(chk_date_range(xaxis, 1997, 8, 2, 1999, 1, 1), true);
+
+    xaxis = window.get_smry_xaxis(3);
+    QCOMPARE(chk_date_range(xaxis, 1997, 8, 2, 1999, 1, 1), true);
+
+    d1.setDate(1999,5,17);
+    until_dt.setDate(d1);
+
+    // rewrite of TEST2.ESMRY, now with data until 1999-05-10
+    make_esmry_from_esmry(esmry2, smry2, "TEST2.ESMRY", until_dt);
+
+    // <ctrl> + <shift> + R for reload, command line not active
+    QTest::keyEvent(QTest::Click, &window, Qt::Key_R, Qt::ControlModifier | Qt::ShiftModifier);
+
+    xaxis = window.get_smry_xaxis(0);
+    QCOMPARE(chk_date_range(xaxis, 1998, 1, 2, 2000, 1, 1), true);
+
+    xaxis = window.get_smry_xaxis(1);
+    QCOMPARE(chk_date_range(xaxis, 1998, 1, 2, 2000, 1, 1), true);
+
+    xaxis = window.get_smry_xaxis(2);
+    QCOMPARE(chk_date_range(xaxis, 1997, 8, 2, 1999, 5, 17), true);
+
+    xaxis = window.get_smry_xaxis(3);
+    QCOMPARE(chk_date_range(xaxis, 1997, 8, 2, 1999, 5, 17), true);
+    window.grab().save("tmp2.png");
+
+    d1.setDate(2001,6,1);
+    until_dt.setDate(d1);
+
+    make_esmry_from_esmry(esmry1, smry1, "TEST1.ESMRY", until_dt);
+
+    // <ctrl> + <shift> + R for reload, command line not active
+    QTest::keyEvent(QTest::Click, &window, Qt::Key_R, Qt::ControlModifier | Qt::ShiftModifier);
+
+    xaxis = window.get_smry_xaxis(0);
+    QCOMPARE(chk_date_range(xaxis, 1998, 1, 2, 2001, 6, 1), true);
+
+    xaxis = window.get_smry_xaxis(1);
+    QCOMPARE(chk_date_range(xaxis, 1998, 1, 2, 2001, 6, 1), true);
+
+    xaxis = window.get_smry_xaxis(2);
+    QCOMPARE(chk_date_range(xaxis, 1997, 8, 2, 1999, 5, 17), true);
+
+    xaxis = window.get_smry_xaxis(3);
+    QCOMPARE(chk_date_range(xaxis, 1997, 8, 2, 1999, 5, 17), true);
+
+    std::filesystem::path testf1(fname_list[0]);
+    std::filesystem::path testf2(fname_list[1]);
+
+    if (std::filesystem::exists(testf1))
+        std::filesystem::remove(testf1);
+
+    if (std::filesystem::exists(testf2))
+        std::filesystem::remove(testf2);
+
+    //window.grab().save("tmp6.p(ng");
+}
 
 QTEST_MAIN(TestQsummary)
 
