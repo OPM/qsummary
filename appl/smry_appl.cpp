@@ -1085,21 +1085,21 @@ void SmryAppl::adjust_yaxis_props(SmryYaxis* axis, double& min_data, double& max
 
 
 template <typename T>
-bool SmryAppl::reopen_loader(int n, std::unique_ptr<T>& smry, const std::filesystem::path& smryfile)
+bool SmryAppl::reopen_loader(int n, std::unique_ptr<T>& smry)
 {
     std::unique_ptr<T> smry_tmp;
 
     try {
         smry_tmp = std::make_unique<T> ( m_smry_files[n] );
     } catch (...) {
-        std::string message = "Error with reopen loader, failed when opening summary file " + smryfile.string();
+        std::string message = "Error with reopen loader, failed when opening summary file " + m_smry_files[n].string();
         throw std::runtime_error(message);
     }
 
     auto nstep_tmp = smry_tmp->numberOfTimeSteps();
     auto nstep = smry->numberOfTimeSteps();
 
-    auto ftime = std::filesystem::last_write_time ( smryfile );
+    auto ftime = std::filesystem::last_write_time ( m_smry_files[n] );
     bool updated = false;
 
     if ( ftime > file_stamp_vector[n] ){
@@ -1167,9 +1167,9 @@ bool SmryAppl::reload_and_update_charts()
         if (std::filesystem::exists(m_smry_files[n] )) {
 
             if (m_file_type[n] == FileType::SMSPEC)
-                updated_list[n] = reopen_loader( n, m_esmry_loader[n], m_smry_files[n] );
+                updated_list[n] = reopen_loader( n, m_esmry_loader[n] );
             else if (m_file_type[n] == FileType::ESMRY)
-                updated_list[n] = reopen_loader( n, m_ext_esmry_loader[n], m_smry_files[n] );
+                updated_list[n] = reopen_loader( n, m_ext_esmry_loader[n] );
 
             if (updated_list[n])
                 need_update = true;
@@ -1240,7 +1240,8 @@ bool SmryAppl::reload_and_update_charts()
         }
     }
 
-    // create new charts
+    if (series_properties[num_charts - 1].size() == 0)
+        num_charts --;
 
     for ( int ind = 0; ind < num_charts; ind++ ) {
 
@@ -2545,17 +2546,7 @@ void SmryAppl::keyPressEvent ( QKeyEvent *event )
                        axisX[chart_ind]->setRange(std::get<0>(current_xrange), std::get<1>(current_xrange));
 
 
-                    //std::cout << "This must be updated \n";
-
                     auto min_max_range = axisX[chart_ind]->get_xrange();
-/*
-                    if (std::get<0>(min_max_range) < 0){
-                       //axisX[chart_ind]->reset_range();
-                       min_max_range = axisX[chart_ind]->get_xrange();
-                    }
-
-                    min_max_range = axisX[chart_ind]->get_xrange();
-*/
                     update_all_yaxis(min_max_range, chart_ind);
                 }
 
