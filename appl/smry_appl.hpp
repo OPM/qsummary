@@ -229,7 +229,7 @@ private:
     void handle_delete_series();
 
     template <typename T>
-    bool reopen_loader(int n, std::unique_ptr<T>& smry, const std::filesystem::path& smryfile);
+    bool reopen_loader(int n, std::unique_ptr<T>& smry);
 
     bool has_smry_vect(int smry_ind, const std::string& keystr);
     const std::vector<float>& get_smry_vect(int case_ind, std::string& keystr);
