@@ -69,6 +69,28 @@ void TestQsummary::test_1a()
     QVERIFY(abs(a_min - 3.0) < 1e-6);
     QVERIFY(abs(a_max - 11.0) < 1e-6);
     QVERIFY(abs(yaxis->multiplier() - 0.001) < 1e-6);
+
+    window.resize(1400, 700);
+
+    QLineEdit* cmdline = window.get_cmdline();
+
+    QSum::add_cmd_line(":y 1 0.0 20.0", cmdline );
+    //window.grab().save("tmp1.png");
+
+    a_min = static_cast<float>(yaxis->min());
+    a_max = static_cast<float>(yaxis->max());
+
+    QVERIFY(abs(a_min - 0.0) < 1e-6);
+    QVERIFY(abs(a_max - 20.0) < 1e-6);
+
+    QSum::add_cmd_line(":yrange 1 2 18", cmdline );
+
+    a_min = static_cast<float>(yaxis->min());
+    a_max = static_cast<float>(yaxis->max());
+
+    QVERIFY(abs(a_min - 2.0) < 1e-6);
+    QVERIFY(abs(a_max - 18.0) < 1e-6);
+
 }
 
 void TestQsummary::test_1b()

@@ -75,8 +75,8 @@ static void printHelp()
 
     std::cout << "\ncommands: \n\n";
 
-    std::cout << " :xrange [from_date] [to_date] - update range for time axis for active chart\n";
-    std::cout << " :yrange [axis] [from_value] [to_value] - update range for value axis for active chart\n";
+    std::cout << " :x [from_date] [to_date] - update range for time axis for active chart\n";
+    std::cout << " :y [axis] [from_value] [to_value] - update range for value axis for active chart\n";
     std::cout << " :r    reload data and update all charts\n";
     std::cout << " :pdf  create pdf file (open file dialog) \n";
     std::cout << " :pdf [file_name] create pdf file save to file name. \n";

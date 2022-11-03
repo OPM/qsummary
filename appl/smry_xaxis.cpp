@@ -142,6 +142,8 @@ bool SmryXaxis::set_range(std::string argstr)
 {
     if (argstr.substr(0,7) == ":xrange")
         argstr = argstr.substr(8);
+    else if (argstr.substr(0,2) == ":x")
+        argstr = argstr.substr(3);
 
     int p1 = argstr.find(" ");
 

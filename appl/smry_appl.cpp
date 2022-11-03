@@ -2391,7 +2391,8 @@ void SmryAppl::keyPressEvent ( QKeyEvent *event )
                 this->add_cmd_to_hist(cmd_var);
                 this->reset_cmdline();
 
-            } else if ( cmd_var.substr ( 0,7 ) == ":xrange" ) {
+            } else if (( cmd_var.substr ( 0,7 ) == ":xrange" ) ||
+                       ( cmd_var.substr ( 0,2 ) == ":x" ))   {
 
                 if ( axisX[chart_ind]->set_range ( cmd_var ) ) {
 
@@ -2406,9 +2407,17 @@ void SmryAppl::keyPressEvent ( QKeyEvent *event )
                     lbl_rootn->setText ( "!Error, xrange command" );
                 }
 
-            } else if ( cmd_var.substr ( 0,7 ) == ":yrange" ) {
+            } else if (( cmd_var.substr ( 0,7 ) == ":yrange" ) ||
+                  ( cmd_var.substr ( 0,2 ) == ":y" )) {
 
-                if ( this->update_yrange ( cmd_var.substr ( 8 ) ) ) {
+                std::string yrange_cmd_str;
+
+                if ( cmd_var.substr ( 0,7 ) == ":yrange" )
+                    yrange_cmd_str = cmd_var.substr ( 8 );
+                else
+                    yrange_cmd_str = cmd_var.substr ( 3 );
+
+                if ( this->update_yrange ( yrange_cmd_str ) ) {
 
                     this->add_cmd_to_hist(cmd_var);
                     this->reset_cmdline();

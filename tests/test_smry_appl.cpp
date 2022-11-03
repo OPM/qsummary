@@ -914,7 +914,7 @@ void TestQsummary::test_reload_1()
     QCOMPARE(chk_date_range(xaxis, 1997, 8, 2, 2000, 1, 1), true);
     QCOMPARE(chk_yaxis_val_range(yaxis, 0.0, 35.0), true);
 
-    QSum::add_cmd_line(":xrange 1999 2000", cmdline );
+    QSum::add_cmd_line(":x 1999 2000", cmdline );
 
     // axis set to new xrange
     QCOMPARE(chk_date_range(xaxis, 1999, 1, 1, 2000, 1, 1), true);
