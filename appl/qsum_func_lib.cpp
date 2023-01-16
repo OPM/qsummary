@@ -127,8 +127,11 @@ void QSum::pre_load_smry(const std::vector<std::filesystem::path>& smry_files,
             auto vect_name = std::get<1>(vect_input[s]);
             auto is_derived = std::get<3>(vect_input[s]);
 
-            if (!is_derived)
-                smry_pre_load[smry_ind].push_back(vect_name);
+            if (!is_derived){
+                if (std::count(smry_pre_load[smry_ind].begin(), smry_pre_load[smry_ind].end(), vect_name) == 0){
+                    smry_pre_load[smry_ind].push_back(vect_name);
+                }
+            }
         }
     }
 
