@@ -1916,7 +1916,6 @@ void SmryAppl::initColorAndStyle()
 {
     linew = 2;
 
-    color_tab.push_back ( QColor ( "black" ) );
 
     QColor green;
     QColor sandy;
@@ -1926,13 +1925,20 @@ void SmryAppl::initColorAndStyle()
     sandy.setRgb ( 244,164,96 );
     red.setRgb ( 255,64,35 );
 
+    color_tab.push_back ( QColor ( "black" ) );
     color_tab.push_back ( green );
     color_tab.push_back ( red );
-    color_tab.push_back ( sandy );
     color_tab.push_back ( QColor ( "blue" ) );
+    color_tab.push_back ( QColor ( "cyan" ) );
     color_tab.push_back ( QColor ( "gray" ) );
+    color_tab.push_back ( QColor ( "magenta" ) );
+
+    //color_tab.push_back ( sandy );
+    //color_tab.push_back ( QColor ( "violet" ) );
 
     style_tab.push_back ( Qt::SolidLine );
+    style_tab.push_back ( Qt::DotLine );
+    style_tab.push_back ( Qt::DotLine );
     style_tab.push_back ( Qt::DotLine );
     style_tab.push_back ( Qt::DotLine );
     style_tab.push_back ( Qt::DotLine );
