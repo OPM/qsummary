@@ -355,6 +355,9 @@ int main(int argc, char *argv[])
 
         QSum::pre_load_smry(smry_files, input_charts, file_type, esmry_loader, lodsmry_loader, nthreads);
 
+        if (separate)
+            input_charts = QSum::charts_separate_folders(smry_files, input_charts);
+
         if (cmdfile.count_define() > 0){
             std::tuple<double,double> io_elapsed;
 
