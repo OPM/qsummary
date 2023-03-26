@@ -259,6 +259,18 @@ bool SmrySeries::all_values_zero()
     return true;
 }
 
+bool SmrySeries::all_values_nonzero()
+{
+    auto data = this->pointsVector();
+
+    for (size_t n = 0; n < data.size(); n++)
+        if (data[n].y() == 0.0)
+            return false;
+
+    return true;
+}
+
+
 std::tuple<QDateTime,QDateTime> SmrySeries::get_min_max_dt_range()
 {
     QDateTime dt_min_utc;
@@ -277,6 +289,45 @@ std::tuple<QDateTime,QDateTime> SmrySeries::get_min_max_dt_range()
 
     return std::make_tuple(dt_min_utc, dt_max_utc);
 }
+
+std::tuple<QDateTime,QDateTime> SmrySeries::get_nonzero_range()
+{
+    QDateTime dt_min_utc;
+    QDateTime dt_max_utc;
+
+    dt_min_utc.setTimeSpec(Qt::UTC);
+    dt_max_utc.setTimeSpec(Qt::UTC);
+
+    dt_min_utc.setDate({1970, 1, 1});
+    dt_min_utc.setTime({0, 0, 0});
+
+    dt_max_utc.setDate({1970, 1, 1});
+    dt_max_utc.setTime({0, 0, 0});
+
+    if (this->all_values_nonzero()){
+        dt_min_utc = dt_min_utc.addMSecs(static_cast<qint64>(m_glob_min_x));
+        dt_max_utc = dt_max_utc.addMSecs(static_cast<qint64>(m_glob_max_x));
+
+    } else {
+
+        auto data = this->pointsVector();
+
+        int n_from = 0;
+        int n_to = data.size() - 1;
+
+        while (data[n_from].y() == 0.0)
+            n_from++;
+
+        while (data[n_to].y() == 0.0)
+            n_to--;
+
+        dt_min_utc = dt_min_utc.addMSecs(static_cast<qint64>(data[n_from].x()));
+        dt_max_utc = dt_max_utc.addMSecs(static_cast<qint64>(data[n_to].x()));
+    }
+
+    return std::make_tuple(dt_min_utc, dt_max_utc);
+}
+
 
 
 

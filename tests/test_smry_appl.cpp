@@ -45,6 +45,7 @@ private slots:
     void test_reload_1();
     void test_reload_2();
     void test_reload_3();
+    void test_scale_axis_ctrl_x();
 };
 
 const int max_number_of_charts = 2000;
@@ -601,6 +602,71 @@ void TestQsummary::test_scale_axis_vect_opt()
 
     QCOMPARE(chk_date_range(xaxis, 2002, 1, 1, 2003, 1, 1), true);
     QCOMPARE(chk_yaxis_val_range(yaxis, 5.0, 40.0), true);
+}
+
+
+
+void TestQsummary::test_scale_axis_ctrl_x()
+{
+    SmryAppl::input_list_type input_charts;
+    SmryAppl::loader_list_type loaders;
+
+    int num_files = 2;
+
+    std::vector<std::string> fname_list;
+    std::vector<FileType> file_type;
+
+    file_type.resize(num_files);
+    fname_list.resize(num_files);
+
+    fname_list[0] = "../tests/smry_files/NORNE_ATW2013.ESMRY";
+    fname_list[1] = "../tests/smry_files/NORNE_S1.ESMRY";
+
+    file_type = { FileType::ESMRY, FileType::ESMRY };
+
+    std::string smry_vect = "WBHP:B-4H";
+    std::string xrange_str = "";
+
+    // -----
+
+    std::unordered_map<int, std::unique_ptr<Opm::EclIO::ESmry>> esmry_loader;
+    std::unordered_map<int, std::unique_ptr<Opm::EclIO::ExtESmry>> ext_smry_loader;
+    std::vector<std::filesystem::path> smry_files;
+
+    // set up loaders and smry file system paths
+    smry_input(fname_list, file_type, esmry_loader, ext_smry_loader, smry_files);
+
+    // set up input_charts data type
+    QSum::chart_input_from_string(smry_vect, input_charts, file_type, esmry_loader, ext_smry_loader, max_number_of_charts, xrange_str);
+
+    // make loaders for smryAppl
+    loaders = std::make_tuple(smry_files, file_type, std::move(esmry_loader), std::move(ext_smry_loader));
+
+    // derived summary object for smryAP
+    std::unique_ptr<DerivedSmry> derived_smry;
+
+    SmryAppl window(fname_list, loaders, input_charts, derived_smry);
+
+    window.resize(1400, 700);
+
+
+    QCOMPARE(window.number_of_charts(), 1);
+
+    QtCharts::QChart* chart = window.get_chart(0);
+
+    QRectF plota = chart->plotArea();
+
+    SmryXaxis* xaxis = window.get_smry_xaxis(0);
+    SmryYaxis* yaxis = window.get_smry_yaxis(0, 0);
+
+    QCOMPARE(chk_date_range(xaxis, 1997, 11, 7, 2006, 12, 1), true);
+    QCOMPARE(chk_yaxis_val_range(yaxis, 0.0, 300.0), true);
+
+    // Use <ctrl> + X to change x-axis and y-axis range to fit zon-zero data
+    QTest::keyEvent(QTest::Click, &window, Qt::Key_X, Qt::ControlModifier);
+
+    QCOMPARE(chk_date_range(xaxis, 1998, 5, 1, 2001, 5, 31), true);
+    QCOMPARE(chk_yaxis_val_range(yaxis, 170.0, 240.0), true);
 }
 
 

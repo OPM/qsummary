@@ -91,6 +91,7 @@ static void printHelp()
     std::cout << " <ctrl> + <shift> + r  reload data and update all charts  \n";
     std::cout << " <ctrl> + p  create pdf file (open file dialog)  \n";
     std::cout << " <ctrl> + o  open summary file (open file dialog)  \n";
+    std::cout << " <ctrl> + x  rescale x axis, from first to last non-zero. y-axis also rescaled  \n";
     std::cout << " <ctrl> + z  rescale value axis, ignore zero  \n";
     std::cout << " <delete>   delete last series active chart  \n";
     std::cout << " <ctrl> + <delete>   delete active chart  \n";

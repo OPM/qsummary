@@ -242,6 +242,8 @@ private:
     void copy_to_clipboard();
     void switch_markes();
 
+    void calc_min_xrange();
+
     void update_full_xrange(int chart_index);
 
     void select_first_chart();
