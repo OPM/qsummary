@@ -35,6 +35,7 @@ private slots:
     void test_2b();
     void test_2c();
     void test_2d();
+    void test_2e();
 };
 
 
@@ -330,6 +331,53 @@ void TestQsummary::test_2d()
 
     QVERIFY(abs(a_min - 100.0) < 1e-6);
     QVERIFY(abs(a_max - 240.0) < 1e-6);
+    QVERIFY(abs(yaxis->multiplier() - 1.00) < 1e-6);
+}
+
+void TestQsummary::test_2e()
+{
+    std::vector<std::string> fname_list;
+    fname_list.push_back("../tests/smry_files/NORNE_ATW2013.ESMRY");
+    fname_list.push_back("../tests/smry_files/NORNE_S1.ESMRY");
+
+    auto loaders = QSum::make_loaders(fname_list);
+
+    std::vector<SmryAppl::vect_input_type> vect_list_c1;
+
+    vect_list_c1 = {
+                     std::make_tuple(0, "WBHP:B-4BH", -1, false),
+                     std::make_tuple(1, "WBHP:B-4BH", -1, false),
+                   };
+
+
+    SmryAppl::input_list_type input_list;
+
+    input_list = { std::make_tuple(vect_list_c1, ""),
+                 };
+
+    std::unique_ptr<DerivedSmry> derived_smry;
+
+    SmryAppl window(fname_list, loaders, input_list, derived_smry);
+
+    SmryYaxis* yaxis = window.get_smry_yaxis(0, 0);
+
+    float a_min = static_cast<float>(yaxis->min());
+    float a_max = static_cast<float>(yaxis->max());
+
+    QVERIFY(abs(a_min - 0.0) < 1e-6);
+    QVERIFY(abs(a_max - 300.0) < 1e-6);
+    QVERIFY(abs(yaxis->multiplier() - 1.00) < 1e-6);
+
+    QLineEdit* cmdline = window.get_cmdline();
+
+    // Use <ctrl> + X to change x-axis and y-axis range to fit zon-zero data
+    QTest::keyEvent(QTest::Click, cmdline, Qt::Key_X, Qt::ControlModifier);
+
+    a_min = static_cast<float>(yaxis->min());
+    a_max = static_cast<float>(yaxis->max());
+
+    QVERIFY(abs(a_min - 120.0) < 1e-6);
+    QVERIFY(abs(a_max - 300.0) < 1e-6);
     QVERIFY(abs(yaxis->multiplier() - 1.00) < 1e-6);
 }
 

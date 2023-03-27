@@ -2077,6 +2077,10 @@ bool SmryAppl::eventFilter ( QObject *object, QEvent *event )
 
             return true;
 
+        } else if ( keyEvent->key()  == Qt::Key_X  &&  m_ctrl_key  && !m_shift_key && !m_alt_key ) {
+
+            this->calc_min_xrange();
+
         } else if ( keyEvent->key() == Qt::Key_C  &&  m_ctrl_key  && !m_shift_key && !m_alt_key ) {
 
             this->copy_to_clipboard();
@@ -2329,6 +2333,37 @@ bool SmryAppl::eventFilter ( QObject *object, QEvent *event )
     }
 
     return false;
+}
+
+void SmryAppl::calc_min_xrange()
+{
+    auto chart_series = this->get_smry_series(chart_ind);
+
+    if (chart_series.size() > 0) {
+
+        auto min_max_dt = chart_series[0]->get_nonzero_range();
+
+        QDateTime dt_min_x = std::get<0>(min_max_dt);
+        QDateTime dt_max_x = std::get<1>(min_max_dt);
+
+        for (size_t n = 1; n < chart_series.size(); n++) {
+
+            min_max_dt = chart_series[0]->get_nonzero_range();
+
+            if (std::get<0>(min_max_dt) < dt_min_x)
+                dt_min_x =  std::get<0>(min_max_dt);
+
+            if (std::get<1>(min_max_dt) > dt_max_x)
+                dt_max_x =  std::get<1>(min_max_dt);
+        }
+
+        auto xaxis = this->get_smry_xaxis(chart_ind);
+
+        xaxis->setRange(dt_min_x, dt_max_x);
+
+        auto min_max_range = axisX[chart_ind]->get_xrange();
+        update_all_yaxis(min_max_range, chart_ind);
+    }
 }
 
 
@@ -2659,10 +2694,17 @@ void SmryAppl::keyPressEvent ( QKeyEvent *event )
         update_all_yaxis(min_max_range, chart_ind, true);
     }
 
+    else if ( m_smry_loaded && event->key() == Qt::Key_X  &&  m_ctrl_key  && !m_shift_key && !m_alt_key ) {
+
+        this->calc_min_xrange();
+    }
+
+
     else if ( m_smry_loaded && event->key() == Qt::Key_M  &&  m_ctrl_key  && !m_shift_key && !m_alt_key ) {
 
         switch_markes();
     }
+
 
     else if ( m_smry_loaded && event->key() == Qt::Key_C  &&  m_ctrl_key  && !m_shift_key && !m_alt_key ) {
 

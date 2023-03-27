@@ -46,7 +46,11 @@ public:
     std::tuple<double,double> get_min_max_xrange() { return std::make_tuple(m_glob_min_x, m_glob_max_x); };
     std::tuple<QDateTime,QDateTime> get_min_max_dt_range(); // { return std::make_tuple(m_glob_min_x, m_glob_max_x); };
 
+    std::tuple<QDateTime,QDateTime> get_nonzero_range(); // { return std::make_tuple(m_glob_min_x, m_glob_max_x); };
+
     bool all_values_zero();
+    bool all_values_nonzero();
+
     void calcMinAndMax();
 
 private slots:
