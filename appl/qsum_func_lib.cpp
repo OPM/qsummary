@@ -23,6 +23,31 @@
 #include <iostream>
 
 
+int next_vect(int from, const std::string& vect_string){
+
+    // find first of comma (,) which is not a digit (0-9) and not * or ?
+
+    bool found = false;
+    int p2;
+
+    while (!found){
+        p2 = vect_string.find_first_of(",",from);
+
+        if (p2 == -1)
+            return p2;
+
+        char next_char = vect_string[p2+1];
+
+        if ((!std::isdigit(next_char)) && (next_char != '*') && (next_char != '?') ){
+            return p2;
+        } else {
+            from = p2 + 1;
+        }
+    }
+
+    return -1;
+}
+
 void QSum::chart_input_from_string(std::string& vect_string,
                                    SmryAppl::input_list_type& input_charts,
                                    const std::vector<FileType>& file_type,
@@ -34,15 +59,18 @@ void QSum::chart_input_from_string(std::string& vect_string,
 {
     std::transform(vect_string.begin(), vect_string.end(), vect_string.begin(), ::toupper);
 
+    while (vect_string.back() == ',')
+        vect_string.pop_back();
+
     std::vector<std::string> vect_list;
 
     int p1 = 0;
-    int p2 = vect_string.find_first_of(",");
+    int p2 = next_vect(p1, vect_string);
 
     while (p2 > -1) {
         vect_list.push_back(vect_string.substr(p1, p2 - p1));
         p1 = p2 + 1;
-        p2 = vect_string.find_first_of(",", p1);
+        p2 = next_vect(p1, vect_string);
     }
 
     vect_list.push_back(vect_string.substr(p1));
