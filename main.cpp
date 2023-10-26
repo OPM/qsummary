@@ -337,6 +337,8 @@ int main(int argc, char *argv[])
 
         QSum::chart_input_from_string(smry_vect, input_charts, file_type, esmry_loader, lodsmry_loader, max_number_of_charts, xrange_str);
 
+        //QSum::print_input_charts(input_charts);
+
         QSum::pre_load_smry(smry_files, input_charts, file_type, esmry_loader, lodsmry_loader, nthreads);
 
         if (ignore_zero)
