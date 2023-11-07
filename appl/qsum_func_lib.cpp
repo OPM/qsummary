@@ -48,6 +48,102 @@ int next_vect(int from, const std::string& vect_string){
     return -1;
 }
 
+std::tuple<std::vector<std::string>, std::string> parse_vect(const std::string& vect)
+{
+    std::vector<std::string> keys;
+
+    int p1 = vect.find_first_of(":");
+    std::string pattern = vect.substr(p1+1);
+
+    std::string str1 = vect.substr(0, p1);
+
+    int p0 = 0;
+    p1 = str1.find_first_of("+");
+
+    while (p1 != std::string::npos){
+        keys.push_back(str1.substr(p0, p1-p0));
+        p0 = p1 + 1;
+        p1 = str1.find_first_of("+", p0);
+    }
+
+    keys.push_back(str1.substr(p0, p1-p0));
+
+    return std::make_tuple(keys, pattern);
+}
+
+
+template <typename T>
+std::vector<std::string> get_vect_list(T& loader,const std::string& vect)
+{
+    std::vector<std::string> keyw_list;
+
+    int p2 = vect.find_first_of("+");
+
+    if (p2 > -1 ){
+
+        std::tuple<std::vector<std::string>, std::string> res = parse_vect(vect);
+
+        std::vector<std::string> keys = std::get<0>(res);
+        std::string pattern = std::get<1>(res);
+
+        int nKeys = keys.size();
+
+        if ((keys[0].substr(0,1) != "W") && (keys[0].substr(0,1) != "G") ){
+            std::cout << "\nSpecifying multiple vectors with + and pattern (*) only allowed for wells and group vectors \n\n";
+            std::cout << "\nThe following key could not be processed \n\n > " << vect << "\n\n";
+            exit(1);
+        }
+
+        for (size_t n = 1; n < nKeys; n ++){
+            if (keys[0].substr(0,1) != keys[n].substr(0,1)){
+                std::cout << "\nSpecifying multiple vectors with + and pattern (*), vectors must be eighter of type well or group \n\n";
+                std::cout << "\nThe following key could not be processed \n\n > " << vect << "\n\n";
+                exit(1);
+            }
+        }
+
+        std::vector<std::vector<std::string>> ref_keylist;
+        ref_keylist.resize(nKeys);
+
+        for (size_t n = 0; n < nKeys; n ++){
+            ref_keylist[n] = loader->keywordList(keys[n] + ":" + pattern);
+        }
+
+        std::set<std::string> wg_list;
+
+        for (auto& key_name : ref_keylist[0]){
+            int p1 = key_name.find_first_of(":");
+            std::string wg_name = key_name.substr(p1 + 1);
+            wg_list.insert(wg_name);
+        }
+
+        for (auto wg_name = wg_list.begin(); wg_name != wg_list.end(); wg_name++){
+            std::string key_str;
+
+            for (int n = 0; n < nKeys; n++){
+
+                std::string cand = keys[n] + ":" + *wg_name;
+
+                if (std::find(ref_keylist[n].begin(), ref_keylist[n].end(), cand) != ref_keylist[n].end()) {
+                    key_str = key_str + keys[n] + "+";
+
+                }
+            }
+
+            if (key_str.size() > 0){
+                key_str.pop_back();
+                keyw_list.push_back(key_str + ":" + *wg_name);
+            }
+
+        }
+
+    } else {
+        keyw_list = loader->keywordList(vect);
+    }
+
+    return keyw_list;
+}
+
 void QSum::chart_input_from_string(std::string& vect_string,
                                    SmryAppl::input_list_type& input_charts,
                                    const std::vector<FileType>& file_type,
@@ -67,7 +163,7 @@ void QSum::chart_input_from_string(std::string& vect_string,
     int p1 = 0;
     int p2 = next_vect(p1, vect_string);
 
-    while (p2 > -1) {
+    while (p2 !=std::string::npos){
         vect_list.push_back(vect_string.substr(p1, p2 - p1));
         p1 = p2 + 1;
         p2 = next_vect(p1, vect_string);
@@ -77,17 +173,15 @@ void QSum::chart_input_from_string(std::string& vect_string,
 
     for (auto vect : vect_list) {
 
-        int p = vect.find_first_of("*");
+        int p1 = vect.find_first_of("*");
 
         std::vector<std::string> keyw_list;
 
-        if (p > -1) {
-
+        if (p1 > -1) {
             if (file_type[0] == FileType::SMSPEC)
-                keyw_list = esmry_loader[0]->keywordList(vect);
+                keyw_list = get_vect_list(esmry_loader[0], vect);
             else if (file_type[0] == FileType::ESMRY)
-                keyw_list = lodsmry_loader[0]->keywordList(vect);
-
+                keyw_list = get_vect_list(lodsmry_loader[0], vect);
         } else {
             keyw_list.push_back(vect);
         }
@@ -108,19 +202,40 @@ void QSum::update_input(SmryAppl::input_list_type& input_charts,
 {
     for (auto v : keyw_list) {
 
+        int p1 = v.find_first_of("+");
         std::vector<SmryAppl::vect_input_type> vect_list;
 
-        for (size_t n = 0; n < file_type.size(); n ++){
+        std::vector<std::string> varlist;
 
-            bool hasVect;
+        if (p1 > -1){
 
-            if (file_type[n] == FileType::SMSPEC)
-                hasVect = esmry_loader[n]->hasKey(v);
-            else if (file_type[n] == FileType::ESMRY)
-                hasVect = lodsmry_loader[n]->hasKey(v);
+            std::tuple<std::vector<std::string>, std::string> res = parse_vect(v);
+            std::vector<std::string> v_key_list = std::get<0>(res);
+            std::string wgname = std::get<1>(res);
 
-            if (hasVect)
-                vect_list.push_back(std::make_tuple (n, v, -1, false));
+            for (auto& key : v_key_list){
+                varlist.push_back(key + ":" + wgname);
+            }
+
+        } else {
+            varlist.push_back(v);
+        }
+
+
+        for (auto& var : varlist) {
+
+            for (size_t n = 0; n < file_type.size(); n ++) {
+
+                bool hasVect;
+
+                if (file_type[n] == FileType::SMSPEC)
+                    hasVect = esmry_loader[n]->hasKey(var);
+                else if (file_type[n] == FileType::ESMRY)
+                    hasVect = lodsmry_loader[n]->hasKey(var);
+
+                if (hasVect)
+                    vect_list.push_back(std::make_tuple (n, var, -1, false));
+            }
         }
 
         if (vect_list.size() > 0){
