@@ -46,6 +46,7 @@
 
 #include <omp.h>
 
+#include <chrono>
 
 #if QT_VERSION < QT_VERSION_CHECK(5, 14, 0)
 namespace Qt
@@ -259,12 +260,25 @@ int main(int argc, char *argv[])
 
         if (ext == ".SMSPEC") {
             file_type[n] = FileType::SMSPEC;
-
-            try {
-                esmry_vect[n] = std::make_unique<Opm::EclIO::ESmry>(filename);
-            } catch (...){
-                std::string message = "Error opening SMSPEC file " + filename.string() + " in main function";
-                throw std::runtime_error(message);
+            
+            int t = 0;
+            bool open_ok = false;
+            
+            while (open_ok == false){
+                try {
+                    esmry_vect[n] = std::make_unique<Opm::EclIO::ESmry>(filename);
+                    open_ok = true;
+                    
+                } catch (...){
+                    t++;
+                    std::this_thread::sleep_for(std::chrono::milliseconds(100));
+                    
+                    if ( t > 2){
+                        std::string message = "Error opening SMSPEC file " + filename.string() + " in main function";
+                        message = message + " after " + std::to_string(t) + " attempts";  
+                        throw std::runtime_error(message);
+                    }
+                }                    
             }
 
         }  else if (ext == ".ESMRY") {
@@ -278,8 +292,7 @@ int main(int argc, char *argv[])
             }
         }
     }
-
-
+    
     for (size_t n=0; n < num_files; n++){
         if (file_type[n] == FileType::SMSPEC)
             esmry_loader[n] = std::move(esmry_vect[n]);
