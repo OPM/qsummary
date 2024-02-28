@@ -47,6 +47,7 @@
 #include <omp.h>
 
 #include <chrono>
+#include <thread>
 
 #if QT_VERSION < QT_VERSION_CHECK(5, 14, 0)
 namespace Qt

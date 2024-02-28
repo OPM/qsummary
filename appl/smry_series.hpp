@@ -53,6 +53,9 @@ public:
 
     void calcMinAndMax();
 
+    void setHighlighted(const bool value) {m_highlighted = value;}
+    bool isHighlighted() const {return m_highlighted;}
+
 private slots:
 
     void onHovered(const QPointF &point, bool state);
@@ -70,6 +73,8 @@ private:
 
      double m_glob_min_x;
      double m_glob_max_x;
+     
+     bool m_highlighted = false; 
 };
 
 

@@ -641,7 +641,7 @@ bool SmryAppl::add_new_series ( int chart_ind, int smry_ind, std::string vect_na
     pen.setWidth ( linew );
     pen.setStyle ( style_tab[ind] );
 
-    series[chart_ind].back()->setPen ( pen );
+    series[chart_ind].back()->setPen( pen );
 
     if ( axisX[chart_ind] == nullptr ) {
 
@@ -668,10 +668,41 @@ bool SmryAppl::add_new_series ( int chart_ind, int smry_ind, std::string vect_na
 
     this->update_chart_title_and_legend ( chart_ind );
 
+    // Click to highlight, legend tooltip and legend reflecting series style
+    QLegend* legend = chartList[chart_ind]->legend();
+    legend->setShowToolTips(true);
+    auto cur_series = series[chart_ind].back();
+    cur_series->setPointLabelsVisible(false);
+    QList<QLegendMarker*> markers = legend->markers(cur_series);
+    if (markers.size() > 0) {
+        auto marker = markers.at(0);
+        connect(markers.at(0), &QLegendMarker::clicked, [=]() {
+            if (!cur_series->isHighlighted()) {
+                QFont font = marker->font();
+                font.setBold(true);
+                marker->setFont(font);
+                QPen pen = cur_series->pen();
+                pen.setWidth(4);
+                cur_series->setPen(pen);
+                cur_series->setHighlighted(true);
+            } else {
+                QFont font = marker->font();
+                font.setBold(false);
+                marker->setFont(font);
+                QPen pen = cur_series->pen();
+                pen.setWidth(2);
+                cur_series->setPen(pen);
+                cur_series->setHighlighted(false);
+            }
+        });
+        QPen pen = cur_series->pen();
+        marker->setPen(pen);
+        marker->setShape(QLegend::MarkerShapeFromSeries);
+    }
+
     // tskille: need something here to repaint the chart view.
     // this is not a good fix, but works for now
     // this is causing an segmentation fault when used with delete series
-
     chart_view_list[chart_ind]->update_graphics();
 
 
@@ -893,7 +924,7 @@ SmryAppl::vectorEntry SmryAppl::make_vector_entry ( std::string vect_name )
 
     std::vector<std::string> misc = {"TCPU", "ELAPSED", "TIME", "TIMESTEP", "YEARS", "DAY", "MAXDPR",
         "MAXDSG", "MAXDSO", "MAXDSW", "MLINEARS", "MONTH", "MSUMLINS", "NEWTON", "NLINEARS", "STEPTYPE",
-        "YEAR" };
+        "YEAR", "MSUMNEWT" };
 
     if ( std::find ( misc.begin(), misc.end(), vect_name ) != misc.end() ) {
         res = std::make_tuple ( vect_name, "", "" );
@@ -1932,11 +1963,19 @@ void SmryAppl::initColorAndStyle()
     color_tab.push_back ( QColor ( "cyan" ) );
     color_tab.push_back ( QColor ( "gray" ) );
     color_tab.push_back ( QColor ( "magenta" ) );
+    color_tab.push_back ( QColor ( "violet" ) );
+    color_tab.push_back ( QColor ( "darkBlue" ) );
+    color_tab.push_back ( QColor ( "darkCyan" ) );
+    color_tab.push_back ( QColor ( "darkMagenta" ) );
 
     //color_tab.push_back ( sandy );
     //color_tab.push_back ( QColor ( "violet" ) );
 
     style_tab.push_back ( Qt::SolidLine );
+    style_tab.push_back ( Qt::DotLine );
+    style_tab.push_back ( Qt::DotLine );
+    style_tab.push_back ( Qt::DotLine );
+    style_tab.push_back ( Qt::DotLine );
     style_tab.push_back ( Qt::DotLine );
     style_tab.push_back ( Qt::DotLine );
     style_tab.push_back ( Qt::DotLine );
