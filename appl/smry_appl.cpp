@@ -922,9 +922,15 @@ SmryAppl::vectorEntry SmryAppl::make_vector_entry ( std::string vect_name )
 {
     SmryAppl::vectorEntry res;
 
-    std::vector<std::string> misc = {"TCPU", "ELAPSED", "TIME", "TIMESTEP", "YEARS", "DAY", "MAXDPR",
-        "MAXDSG", "MAXDSO", "MAXDSW", "MLINEARS", "MONTH", "MSUMLINS", "NEWTON", "NLINEARS", "STEPTYPE",
-        "YEAR", "MSUMNEWT" };
+    const std::vector<std::string> misc {
+        "DAY",
+        "ELAPSED",
+        "MAXDPR", "MAXDSG", "MAXDSO", "MAXDSW", "MLINEARS", "MONTH", "MSUMLINS", "MSUMNEWT",
+        "NEWTON", "NLINEARS", "NLINSMAX", "NLINSMIN",
+        "STEPTYPE",
+        "TCPU", "TCPUDAY", "TCPUTS", "TELAPLIN", "TIME", "TIMESTEP",
+        "YEAR", "YEARS",
+    };
 
     if ( std::find ( misc.begin(), misc.end(), vect_name ) != misc.end() ) {
         res = std::make_tuple ( vect_name, "", "" );
