@@ -925,10 +925,10 @@ SmryAppl::vectorEntry SmryAppl::make_vector_entry ( std::string vect_name )
     const std::vector<std::string> misc {
         "DAY",
         "ELAPSED",
-        "MAXDPR", "MAXDSG", "MAXDSO", "MAXDSW", "MLINEARS", "MONTH", "MSUMLINS", "MSUMNEWT",
+        "MAXDPR", "MAXDSG", "MAXDSO", "MAXDSW", "MLINEARS", "MNTH", "MONTH", "MSUMLINS", "MSUMNEWT",
         "NEWTON", "NLINEARS", "NLINSMAX", "NLINSMIN",
         "STEPTYPE",
-        "TCPU", "TCPUDAY", "TCPUTS", "TELAPLIN", "TIME", "TIMESTEP",
+        "TCPU", "TCPUDAY", "TCPUTS", "TELAPLIN", "TIME", "TIMESTEP", "TIMESTRY",
         "YEAR", "YEARS",
     };
 
