@@ -83,3 +83,4 @@ target_link_libraries(scale_yaxis PRIVATE smry_appl Qt5::Test Qt5::Core Qt5::Wid
 target_link_libraries(smryappl PRIVATE smry_appl Qt5::Test Qt5::Core Qt5::Widgets Qt5::Charts stdc++fs)
 target_link_libraries(sep_folders PRIVATE smry_appl Qt5::Test Qt5::Core Qt5::Widgets Qt5::Charts stdc++fs)
 
+install(TARGETS qsummary DESTINATION bin)
