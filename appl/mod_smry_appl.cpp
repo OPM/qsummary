@@ -608,7 +608,7 @@ bool SmryAppl::add_new_series ( int chart_ind, int smry_ind, std::string vect_na
     // ->  3.2e-3
 
     std::string time_unit = m_esmry_loader[smry_ind]->get_unit ( "TIME" );
-    //std::cout << "time unit: |" << time_unit << "| \n";
+
 
     for ( size_t n = n0; n <  n1 + 1; n++ ) {
 
