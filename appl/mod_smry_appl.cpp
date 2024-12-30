@@ -608,7 +608,7 @@ bool SmryAppl::add_new_series ( int chart_ind, int smry_ind, std::string vect_na
     // ->  3.2e-3
 
     std::string time_unit = m_esmry_loader[smry_ind]->get_unit ( "TIME" );
-    //std::cout << "time unit: |" << time_unit << "| \n";
+
 
     for ( size_t n = n0; n <  n1 + 1; n++ ) {
 
@@ -939,10 +939,10 @@ SmryAppl::vectorEntry SmryAppl::make_vector_entry ( std::string vect_name )
     const std::vector<std::string> misc {
         "DAY",
         "ELAPSED",
-        "MAXDPR", "MAXDSG", "MAXDSO", "MAXDSW", "MLINEARS", "MNTH", "MONTH", "MSUMLINS", "MSUMNEWT",
+        "MAXDPR", "MAXDSG", "MAXDSO", "MAXDSW", "MLINEARS", "MONTH", "MSUMLINS", "MSUMNEWT",
         "NEWTON", "NLINEARS", "NLINSMAX", "NLINSMIN",
         "STEPTYPE",
-        "TCPU", "TCPUDAY", "TCPUTS", "TELAPLIN", "TIME", "TIMESTEP", "TIMESTRY",
+        "TCPU", "TCPUDAY", "TCPUTS", "TELAPLIN", "TIME", "TIMESTEP",
         "YEAR", "YEARS",
     };
 
