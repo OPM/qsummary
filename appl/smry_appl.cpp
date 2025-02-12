@@ -605,10 +605,7 @@ bool SmryAppl::add_new_series ( int chart_ind, int smry_ind, std::string vect_na
     if ( n0 == timev.size() )
         n0 = 0;
 
-    // ->  3.2e-3
-
     std::string time_unit = m_esmry_loader[smry_ind]->get_unit ( "TIME" );
-    //std::cout << "time unit: |" << time_unit << "| \n";
 
     for ( size_t n = n0; n <  n1 + 1; n++ ) {
 
@@ -616,7 +613,7 @@ bool SmryAppl::add_new_series ( int chart_ind, int smry_ind, std::string vect_na
 
             double d_msec;
 
-            if (time_unit == "  DAYS")
+            if (time_unit.find("DAYS") != std::string::npos)
                 d_msec = static_cast<double>(timev[n])* 24.0 * 3600.0 * 1000.0;
             else if (time_unit == "HOURS")
                 d_msec = static_cast<double>(timev[n])* 3600.0 * 1000.0;
