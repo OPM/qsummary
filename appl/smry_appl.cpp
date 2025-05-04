@@ -605,7 +605,12 @@ bool SmryAppl::add_new_series ( int chart_ind, int smry_ind, std::string vect_na
     if ( n0 == timev.size() )
         n0 = 0;
 
-    std::string time_unit = m_esmry_loader[smry_ind]->get_unit ( "TIME" );
+    std::string time_unit;
+
+    if (m_file_type[smry_ind] == FileType::SMSPEC)
+        time_unit = m_esmry_loader[smry_ind]->get_unit ( "TIME" );
+    else if (m_file_type[smry_ind] == FileType::ESMRY)
+        time_unit = m_ext_esmry_loader[smry_ind]->get_unit ( "TIME" );
 
     for ( size_t n = n0; n <  n1 + 1; n++ ) {
 
