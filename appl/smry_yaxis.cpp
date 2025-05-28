@@ -44,7 +44,7 @@ void SmryYaxis::update_series_data(AxisMultiplierType mult_type, float mult, con
     for (size_t n = 0; n < series.size(); n++){
         if (series[n]->attachedAxes()[1] == this){
 
-            auto vect = series[n]->pointsVector();
+            auto vect = series[n]->points();
             auto new_mult = mult / axis_multiplier;
 
             for (size_t i = 0; i < vect.size(); i++)
@@ -66,7 +66,7 @@ void SmryYaxis::update_axis_multiplier(const std::vector<SmrySeries*>& series)
         yvalues.push_back({});
 
         if (series[n]->attachedAxes()[1] == this){
-            auto vect = series[n]->pointsVector();
+            auto vect = series[n]->points();
 
             for (size_t i = 0; i < vect.size(); i++)
                 yvalues[n].push_back(static_cast<float>(vect[i].y()/multiplier()));
@@ -108,7 +108,7 @@ void SmryYaxis::update_axis_multiplier(const std::vector<SmrySeries*>& series)
 
         for (size_t n = 0; n < series.size(); n++){
             if (series[n]->attachedAxes()[1] == this){
-                auto vect = series[n]->pointsVector();
+                auto vect = series[n]->points();
 
                 for (size_t i = 0; i < vect.size(); i++)
                     series[n]->replace(i, vect[i].x(), vect[i].y() / axis_multiplier * updated_multiplier );

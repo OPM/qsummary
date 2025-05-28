@@ -1,0 +1,12 @@
+build with following
+
+mkdir build
+cd build
+
+
+#cmake3 .. -DCMAKE_PREFIX_PATH=/private/tskille/qt6.6.3-gcc13.3.1-2
+cmake3 -C ../../opts1.cmake ..
+
+make -j10
+
+

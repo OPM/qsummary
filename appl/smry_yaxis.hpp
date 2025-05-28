@@ -27,7 +27,7 @@
 
 enum class AxisMultiplierType { one, thousand, million, billion };
 
-class SmryYaxis: public QtCharts::QValueAxis {
+class SmryYaxis: public QValueAxis {
 
 public:
 

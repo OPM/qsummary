@@ -111,7 +111,7 @@ SmryAppl::SmryAppl(std::vector<std::string> arg_vect, loader_list_type& loaders,
 
     charts_list.push_back ( {} );
 
-    QtCharts::QChart* chart = new QtCharts::QChart();
+    QChart* chart = new QChart();
 
     chart->setMinimumSize(1400, 600);
 
@@ -184,7 +184,7 @@ void SmryAppl::init_new_chart()
 {
     charts_list.push_back ( {} );
 
-    QtCharts::QChart* chart = new QtCharts::QChart();
+    QChart* chart = new QChart();
     chartList.push_back ( chart );
 
     ChartView *chart_view = new ChartView( chart, this );
@@ -452,7 +452,8 @@ bool SmryAppl::add_new_series ( int chart_ind, int smry_ind, std::string vect_na
         tm1.setHMS(start_vect[3], start_vect[4], start_vect[5], start_vect[6]);
     }
 
-    QDateTime dt_start_sim(d1, tm1, Qt::UTC);
+    QTimeZone  tz(0);
+    QDateTime dt_start_sim(d1, tm1, tz);
 
     vectorEntry ve = make_vector_entry ( vect_name );
 
@@ -630,7 +631,9 @@ bool SmryAppl::add_new_series ( int chart_ind, int smry_ind, std::string vect_na
             d_msec = round(d_msec);
 
             QDateTime dtime = dt_start_sim;
-            dtime.setTimeSpec(Qt::UTC);      // improves runtime significantly
+            QTimeZone  tz(0);
+
+            dtime.setTimeZone(tz);      // improves runtime significantly
 
             dtime = dtime.addMSecs(static_cast<qint64>(d_msec));
 
@@ -663,7 +666,7 @@ bool SmryAppl::add_new_series ( int chart_ind, int smry_ind, std::string vect_na
 
         axisX[chart_ind] = new SmryXaxis(chart_view_list[chart_ind]);
 
-        auto vect_x1 = series[chart_ind].back()->pointsVector();
+        auto vect_x1 = series[chart_ind].back()->points();
         //axisX[chart_ind]->set_min_value ( vect_x1[0].x() );
 
         chartList[chart_ind]->addAxis ( axisX[chart_ind], Qt::AlignBottom );
@@ -854,7 +857,9 @@ bool SmryAppl::add_new_ens_series ( int chart_ind, std::string vect_name, int va
         dt_start_sim.setDate ( d1 );
         dt_start_sim.setTime ( tm1 );
 
-        dt_start_sim.setTimeSpec(Qt::UTC);
+        QTimeZone  tz(0);
+
+        dt_start_sim.setTimeZone(tz);
 
         vectorEntry ve = make_vector_entry ( vect_name );
 
@@ -1024,7 +1029,7 @@ void SmryAppl::update_xaxis_range ( SmryXaxis* axis )
 
         if ( x_axis[0] == axis ) {
 
-            auto values = series[chart_ind][n]->pointsVector();
+            auto values = series[chart_ind][n]->points();
 
             for ( size_t m = 0; m < values.size(); m++ ) {
                 if ( values[m].x() < min_val )

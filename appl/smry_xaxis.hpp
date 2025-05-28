@@ -25,7 +25,7 @@
 
 #include <appl/chartview.hpp>
 
-class SmryXaxis: public QtCharts::QDateTimeAxis {
+class SmryXaxis: public QDateTimeAxis {
 
 public:
 
