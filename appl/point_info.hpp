@@ -28,7 +28,7 @@
 class PointInfo : public QGraphicsItem
 {
 public:
-    PointInfo(QtCharts::QChart *parent, QtCharts::QLineSeries *series);
+    PointInfo(QChart *parent, QLineSeries *series);
 
     void setText(const QString &text);
     void setAnchor(QPointF point);
@@ -49,8 +49,8 @@ private:
     QRectF m_rect;
     QPointF m_anchor;
     QFont m_font;
-    QtCharts::QChart *m_chart;
-    QtCharts::QLineSeries *m_series;
+    QChart *m_chart;
+    QLineSeries *m_series;
     bool right_below;
 };
 

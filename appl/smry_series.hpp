@@ -32,7 +32,7 @@
 class PointInfo;
 
 
-class SmrySeries: public QtCharts::QLineSeries {
+class SmrySeries: public QLineSeries {
 
 public:
 

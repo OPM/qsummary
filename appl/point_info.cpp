@@ -26,7 +26,7 @@
 
 #include <iostream>
 
-PointInfo::PointInfo(QtCharts::QChart *chart, QtCharts::QLineSeries *series):
+PointInfo::PointInfo(QChart *chart, QLineSeries *series):
     QGraphicsItem(chart),
     m_chart(chart),
     m_series(series)

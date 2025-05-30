@@ -75,7 +75,7 @@ public:
     SmryYaxis* get_smry_yaxis(int chart_ind, int axis_ind);
     SmryXaxis* get_smry_xaxis(int chart_ind) {return axisX[chart_ind];};
 
-    QtCharts::QChart* get_chart(int chart_ind) {return chartList[chart_ind];};
+    QChart* get_chart(int chart_ind) {return chartList[chart_ind];};
     ChartView* get_chartview(int chart_ind) {return chart_view_list[chart_ind];};
 
     std::vector<SmrySeries*> get_smry_series(int chart_ind);
@@ -139,7 +139,7 @@ private:
     QLabel* lbl_rootn;
 
 
-    std::vector<QtCharts::QChart*> chartList;
+    std::vector<QChart*> chartList;
     std::vector<ChartView*> chart_view_list;
 
     std::vector<SmryXaxis*> axisX;

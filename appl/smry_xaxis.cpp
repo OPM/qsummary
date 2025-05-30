@@ -34,14 +34,16 @@ SmryXaxis::SmryXaxis(ChartView *chart_view, QObject *parent)
     this->setVisible(false);
     m_chart_view->show_xaxis_obj();
 
-    m_dt_min_utc.setTimeSpec(Qt::UTC);
-    m_dt_max_utc.setTimeSpec(Qt::UTC);
+    QTimeZone  tz(0);
 
-    xrange_from.setTimeSpec(Qt::UTC);
-    xrange_to.setTimeSpec(Qt::UTC);
+    m_dt_min_utc.setTimeZone(tz);
+    m_dt_max_utc.setTimeZone(tz);
 
-    full_xrange_from.setTimeSpec(Qt::UTC);
-    full_xrange_to.setTimeSpec(Qt::UTC);
+    xrange_from.setTimeZone(tz);
+    xrange_to.setTimeZone(tz);
+
+    full_xrange_from.setTimeZone(tz);
+    full_xrange_to.setTimeZone(tz);
 
     //QDateTime full_xrange_from;
     //QDateTime full_xrange_to;
@@ -153,11 +155,13 @@ bool SmryXaxis::set_range(std::string argstr)
     std::string str_from = argstr.substr(0, p1);
     std::string str_to = argstr.substr(p1 + 1);
 
+    QTimeZone  tz(0);
+
     QDateTime dt1;
-    dt1.setTimeSpec(Qt::UTC);
+    dt1.setTimeZone(tz);
 
     QDateTime dt2;
-    dt2.setTimeSpec(Qt::UTC);
+    dt2.setTimeZone(tz);
 
     if (not get_datetime_from_string(str_from, dt1))
         return false;
@@ -223,10 +227,12 @@ SmryXaxis::tick_type SmryXaxis::make_raw_list(int nThick)
 
     QDateTime dt;
 
+    QTimeZone  tz(0);
+
     dt.setDate(d);
 
     dt.setTime({ h1, mm1, s1, msec1 });
-    dt.setTimeSpec(Qt::UTC);
+    dt.setTimeZone(tz);
     dt = dt.addMSecs(step_msecs);
 
     int n = 0;
@@ -311,8 +317,10 @@ SmryXaxis::tick_type SmryXaxis::make_second_list()
 
     dt.setDate(d);
 
+    QTimeZone  tz(0);
+
     dt.setTime({ h1, mi1, s1, 0 });
-    dt.setTimeSpec(Qt::UTC);
+    dt.setTimeZone(tz);
     dt = dt.addSecs(step_seconds);
 
     while (dt < m_dt_max_utc){
@@ -387,7 +395,9 @@ SmryXaxis::tick_type SmryXaxis::make_minute_list()
     dt.setDate(d);
 
     dt.setTime({ h1, mi1, 0, 0 });
-    dt.setTimeSpec(Qt::UTC);
+
+    QTimeZone  tz(0);
+    dt.setTimeZone(tz);
     dt = dt.addSecs(step_minutes*60);
 
     while (dt < m_dt_max_utc){
@@ -434,8 +444,10 @@ SmryXaxis::tick_type SmryXaxis::make_hr_list()
 
     dt.setDate(d);
 
+    QTimeZone  tz(0);
+
     dt.setTime({ h1, 0, 0, 0 });
-    dt.setTimeSpec(Qt::UTC);
+    dt.setTimeZone(tz);
     dt = dt.addSecs(3600);
 
     while (dt < m_dt_max_utc){
@@ -478,8 +490,10 @@ SmryXaxis::tick_type SmryXaxis::make_day_list()
 
     dt.setDate(d);
 
+    QTimeZone  tz(0);
+
     dt.setTime({ 0, 0, 0, 0 });
-    dt.setTimeSpec(Qt::UTC);
+    dt.setTimeZone(tz);
     dt = dt.addDays(1);
 
     while (dt < m_dt_max_utc){
@@ -521,9 +535,11 @@ SmryXaxis::tick_type SmryXaxis::make_month_list()
 
     QDateTime dt;
 
+    QTimeZone  tz(0);
+
     dt.setDate(d);
     dt.setTime({ 0, 0, 0, 0 });
-    dt.setTimeSpec(Qt::UTC);
+    dt.setTimeZone(tz);
 
     while (dt < m_dt_max_utc){
 
@@ -551,10 +567,11 @@ SmryXaxis::tick_type SmryXaxis::make_year_list()
     d.setDate(y1+1, 1, 1);
 
     QDateTime dt;
+    QTimeZone  tz(0);
 
     dt.setDate(d);
     dt.setTime({ 0, 0, 0, 0 });
-    dt.setTimeSpec(Qt::UTC);
+    dt.setTimeZone(tz);
 
     while (dt < m_dt_max_utc){
 
