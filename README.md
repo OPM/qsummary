@@ -16,6 +16,12 @@ This command will create 7 charts.
 
 
 - Qsummary supports both SMSPEC and ESMRY summary files. 
+- Up to 30 cases/curves per chart use individual colour and line-style
+  combinations, with the first curve solid black for reference.
+- The legend flows left to right and continues on new rows only when needed,
+  without truncating case names. It resizes with the window (which remains
+  freely resizable), uses a slightly smaller font in short windows, and is
+  included in PDF exports. Click a legend label to highlight its curve.
 - Option -z ignors all summary vectors which only holds zero values.
 - You can easily export all charts to a PDF file 
    * \<ctrl\> + p and use the file save dialog
@@ -25,4 +31,3 @@ This command will create 7 charts.
 Use option -h on the command line to get help one command line options, commands and key controls.
 
 Clone opm-common and qsummary and make sure that these two repos a are located next to each other. Start with building opm-common before building qsummary.
-

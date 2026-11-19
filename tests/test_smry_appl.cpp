@@ -18,6 +18,11 @@
 
 
 #include <QtTest/QtTest>
+#include <QGraphicsTextItem>
+#include <QProcess>
+#include <QTemporaryDir>
+#include <QTextBlock>
+#include <QTextLayout>
 
 #include <appl/smry_appl.hpp>
 #include <tests/qsum_test_utility.hpp>
@@ -46,9 +51,170 @@ private slots:
     void test_reload_2();
     void test_reload_3();
     void test_scale_axis_ctrl_x();
+    void test_many_cases_data();
+    void test_many_cases();
 };
 
 const int max_number_of_charts = 2000;
+
+void TestQsummary::test_many_cases_data()
+{
+    QTest::addColumn<int>("case_count");
+    QTest::addColumn<bool>("interactive");
+    for (int count : {1, 9, 10, 30}) {
+        for (bool interactive : {false, true}) {
+            const auto name = QString::number(count) + (interactive ? "-interactive" : "-input");
+            QTest::newRow(qPrintable(name)) << count << interactive;
+        }
+    }
+}
+
+void TestQsummary::test_many_cases()
+{
+    QFETCH(int, case_count);
+    QFETCH(bool, interactive);
+
+    QTemporaryDir directory;
+    QVERIFY(directory.isValid());
+    std::vector<std::string> files;
+    QStringList names;
+    std::vector<SmryAppl::vect_input_type> vectors;
+    for (int n = 0; n < case_count; ++n) {
+        auto name = QString("CASE_%1_REFERENCE_OR_SENSITIVITY_WITH_A_LONG_FULL_CASE_NAME").arg(n + 1, 2, 10, QChar('0'));
+        if (n == 0)
+            name += QString(120, 'X');
+        names.push_back(name);
+        const auto file = directory.filePath(name + ".ESMRY");
+        QVERIFY(QFile::copy("../tests/smry_files/SENS0.ESMRY", file));
+        files.push_back(file.toStdString());
+        vectors.emplace_back(n, "FOPR", -1, false);
+    }
+
+    auto loaders = QSum::make_loaders(files);
+    SmryAppl::input_list_type input;
+    if (!interactive)
+        input.emplace_back(vectors, "");
+    std::unique_ptr<DerivedSmry> derived;
+    SmryAppl window(files, loaders, input, derived);
+    window.resize(1400, 900);
+    window.show();
+
+    if (interactive) {
+        for (int n = 0; n < case_count; ++n)
+            QSum::add_cmd_line(std::to_string(n + 1) + "FOPR", window.get_cmdline());
+    }
+    QCOMPARE(window.number_of_series(0), static_cast<size_t>(case_count));
+    const auto curves = window.get_smry_series(0);
+    QCOMPARE(curves.front()->pen().color(), QColor(Qt::black));
+    QCOMPARE(curves.front()->pen().style(), Qt::SolidLine);
+    std::set<std::pair<QRgb, int>> styles;
+    for (int n = 0; n < case_count; ++n) {
+        QVERIFY(!curves[n]->points().isEmpty());
+        QCOMPARE(curves[n]->name(), names[n]);
+        QVERIFY(styles.emplace(curves[n]->pen().color().rgb(), curves[n]->pen().style()).second);
+    }
+
+    auto chart = window.get_chart(0);
+    auto view = window.get_chartview(0);
+    const auto labels = [&]() {
+        QList<QGraphicsTextItem *> result;
+        for (auto item : view->scene()->items()) {
+            auto text = dynamic_cast<QGraphicsTextItem *>(item);
+            if (text && names.contains(text->toPlainText()) && text->isVisible())
+                result.push_back(text);
+        }
+        return result;
+    };
+
+    for (int width : {1400, 850, 480, 1400}) {
+        window.resize(width, window.height());
+        QTest::qWait(50);
+        QCOMPARE(window.height(), 900);
+        const auto entries = labels();
+        QCOMPARE(entries.size(), case_count);
+        QList<QRectF> rectangles;
+        for (auto label : entries) {
+            const auto rect = label->mapRectToItem(chart, label->boundingRect());
+            QVERIFY2(chart->rect().adjusted(-1, -1, 1, 1).contains(rect), qPrintable(label->toPlainText()));
+            QVERIFY(rect.top() >= chart->plotArea().bottom());
+            for (const auto& other : rectangles)
+                QVERIFY(!rect.intersects(other));
+            rectangles.push_back(rect);
+
+            int length = 0;
+            for (auto block = label->document()->begin(); block.isValid(); block = block.next()) {
+                for (int line = 0; line < block.layout()->lineCount(); ++line)
+                    length += block.layout()->lineAt(line).textLength();
+            }
+            QCOMPARE(length, label->toPlainText().size());
+        }
+        if (case_count > 1)
+            QVERIFY(chart->margins().bottom() > 50);
+
+        // Entries flow left to right; a new row only starts when the next entry does not fit.
+        std::map<int, std::vector<QRectF>> rows;
+        for (const auto& rect : rectangles)
+            rows[qRound(rect.top())].push_back(rect);
+        const qreal right_limit = chart->rect().right() - 12;
+        std::vector<QRectF> previous;
+        for (auto& [top, row] : rows) {
+            std::sort(row.begin(), row.end(), [](const QRectF& a, const QRectF& b) { return a.left() < b.left(); });
+            if (!previous.empty())
+                QVERIFY(previous.back().right() + 14 + 30 + row.front().width() > right_limit);
+            previous = row;
+        }
+        if (width == 1400 && case_count >= 10)
+            QVERIFY(rows.size() < static_cast<size_t>(case_count));
+    }
+
+    window.resize(1400, 400);
+    QTest::qWait(50);
+    QCOMPARE(window.height(), 400);
+    QVERIFY(view->minimumHeight() < 400);
+    QVERIFY(chart->plotArea().height() > 0);
+    for (auto label : labels()) {
+        const auto rect = label->mapRectToItem(chart, label->boundingRect());
+        QVERIFY(rect.top() >= chart->plotArea().bottom());
+        QVERIFY(chart->rect().adjusted(-1, -1, 1, 1).contains(rect));
+    }
+    window.resize(1400, 900);
+    QCoreApplication::processEvents();
+    QCOMPARE(window.height(), 900);
+
+    auto label = labels().front();
+    const int index = names.indexOf(label->toPlainText());
+    const auto position = view->mapFromScene(label->mapToScene(label->boundingRect().center()));
+    QTest::mouseClick(view->viewport(), Qt::LeftButton, Qt::NoModifier, position);
+    QCoreApplication::processEvents();
+    QVERIFY(curves[index]->isHighlighted());
+    QCOMPARE(curves[index]->pen().width(), 4);
+    QTest::mouseClick(view->viewport(), Qt::LeftButton, Qt::NoModifier, position);
+    QCoreApplication::processEvents();
+    QVERIFY(!curves[index]->isHighlighted());
+    QCOMPARE(curves[index]->pen().width(), 2);
+
+    const auto pdf = directory.filePath("curves.pdf");
+    QSum::add_cmd_line(":pdf " + QDir::current().relativeFilePath(pdf).toStdString(), window.get_cmdline());
+    QVERIFY(QFileInfo(pdf).size() > 0);
+    const auto pdftotext = QStandardPaths::findExecutable("pdftotext");
+    if (!pdftotext.isEmpty()) {
+        QProcess extract;
+        extract.start(pdftotext, {pdf, "-"});
+        QVERIFY(extract.waitForFinished());
+        QCOMPARE(extract.exitCode(), 0);
+        auto text = QString::fromUtf8(extract.readAllStandardOutput());
+        text.remove(QRegularExpression("\\s"));
+        for (const auto& name : names)
+            QVERIFY2(text.contains(name), qPrintable(name));
+    }
+
+    for (int n = case_count; n > 0; --n)
+        QTest::keyClick(window.get_cmdline(), Qt::Key_Delete);
+    QCoreApplication::processEvents();
+    QCOMPARE(window.number_of_series(0), size_t(0));
+    QVERIFY(labels().isEmpty());
+    QCOMPARE(chart->margins().bottom(), 20);
+}
 
 QDateTime make_date_from_ms(double mssepoc)
 {
@@ -553,7 +719,7 @@ void TestQsummary::test_scale_axis_vect_opt()
 
     QCOMPARE(window.number_of_charts(), 1);
 
-    QtCharts::QChart* chart = window.get_chart(0);
+    QChart* chart = window.get_chart(0);
 
     QRectF plota = chart->plotArea();
 
@@ -652,7 +818,7 @@ void TestQsummary::test_scale_axis_ctrl_x()
 
     QCOMPARE(window.number_of_charts(), 1);
 
-    QtCharts::QChart* chart = window.get_chart(0);
+    QChart* chart = window.get_chart(0);
 
     QRectF plota = chart->plotArea();
 
@@ -731,7 +897,7 @@ void TestQsummary::test_scale_axis_interactive_1()
 
     QCOMPARE(xaxis->has_xrange(), true);
 
-    QtCharts::QChart* chart = window.get_chart(0);
+    QChart* chart = window.get_chart(0);
 
     QRectF plota = chart->plotArea();
 
@@ -845,7 +1011,7 @@ void TestQsummary::test_scale_axis_interactive_2()
 
     QCOMPARE(xaxis->has_xrange(), true);
 
-    QtCharts::QChart* chart = window.get_chart(0);
+    QChart* chart = window.get_chart(0);
 
     QRectF plota = chart->plotArea();
 

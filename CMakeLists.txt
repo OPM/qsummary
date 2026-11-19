@@ -49,3 +49,13 @@ target_link_libraries(update_ref_define smry_appl Boost::system Qt6::Widgets Qt6
 
 
 install(TARGETS qsummary DESTINATION bin)
+
+include(CTest)
+if(BUILD_TESTING)
+  add_executable(test_smry_appl tests/test_smry_appl.cpp tests/qsum_test_utility.cpp)
+  target_link_libraries(test_smry_appl smry_appl Boost::system Qt6::Test)
+  add_test(NAME test_smry_appl COMMAND test_smry_appl)
+  set_tests_properties(test_smry_appl PROPERTIES
+    WORKING_DIRECTORY "${CMAKE_CURRENT_BINARY_DIR}"
+    ENVIRONMENT "QT_QPA_PLATFORM=offscreen")
+endif()
