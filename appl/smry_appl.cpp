@@ -98,9 +98,9 @@ SmryAppl::SmryAppl(std::vector<std::string> arg_vect, loader_list_type& loaders,
     //max_pr_chart
 
     if (chart_input.size() > 0){
-        ens_mode = max_pr_chart > 9 ? true : false;
+        ens_mode = max_pr_chart > 30;
     } else {
-        ens_mode = m_smry_files.size() > 9 ? true : false;
+        ens_mode = m_smry_files.size() > 30;
     }
 
     lbl_plot = new QLabel ( "new chart", this );
@@ -656,9 +656,9 @@ bool SmryAppl::add_new_series ( int chart_ind, int smry_ind, std::string vect_na
     int ind = series[chart_ind].size() - 1;
 
     QPen pen;
-    pen.setColor ( color_tab[ind] );
+    pen.setColor ( color_tab[ind % color_tab.size()] );
     pen.setWidth ( linew );
-    pen.setStyle ( style_tab[ind] );
+    pen.setStyle ( style_tab[ind % style_tab.size()] );
 
     series[chart_ind].back()->setPen( pen );
 
@@ -902,12 +902,12 @@ bool SmryAppl::add_new_ens_series ( int chart_ind, std::string vect_name, int va
         QPen pen;
         pen.setColor (  QColor ( "gray" ) );
         pen.setWidth ( linew );
-        pen.setStyle ( style_tab[1] );
+        pen.setStyle ( Qt::DotLine );
         ens_series[chart_ind].back()->setPen ( pen );
 
     }
 
-    chartList[chart_ind]->legend()->hide();
+    chart_view_list[chart_ind]->set_legend_visible(false);
     chartList[chart_ind]->setTitle ( QString::fromStdString ( vect_name ) );
 
     double after_loading = 0.0;
@@ -1414,6 +1414,8 @@ void SmryAppl::delete_last_series()
         auto min_max_range = axisX[chart_ind]->get_xrange();
         update_all_yaxis(min_max_range, chart_ind);
         this->update_chart_title_and_legend ( chart_ind );
+    } else {
+        chart_view_list[chart_ind]->update_legend();
     }
 
     if ( ( series[chart_ind].size() == 0 ) && ( chart_ind == ( chartList.size() - 1 ) ) ) {
@@ -1457,12 +1459,10 @@ void SmryAppl::update_chart_title_and_legend ( int chart_ind )
 {
     auto series_props = charts_list[chart_ind];
 
-    std::set<int> smry_ind_set;
     std::set<std::string> name_set;
     std::set<std::string> item1_set;
     std::set<std::string> item2_set;
 
-    bool legende_rootn = true;
     bool legende_name = true;
     bool legende_item1 = true;
     bool legende_item2 = true;
@@ -1471,7 +1471,6 @@ void SmryAppl::update_chart_title_and_legend ( int chart_ind )
 
         SmryAppl::vectorEntry ve = std::get<2> ( series_props[n] );
 
-        smry_ind_set.insert ( std::get<0> ( series_props[n] ) );
         name_set.insert ( std::get<0> ( ve ) );
         item1_set.insert ( std::get<1> ( ve ) );
         item2_set.insert ( std::get<2> ( ve ) );
@@ -1479,20 +1478,6 @@ void SmryAppl::update_chart_title_and_legend ( int chart_ind )
 
     std::string title = "";
 
-
-    if ( smry_ind_set.size() == 1 ) {
-
-        int smry_index = *(smry_ind_set.begin());
-
-        if (smry_index < 0)
-            title = "Derives Smry";
-        else if (m_file_type[smry_index] == FileType::SMSPEC)
-            title = m_esmry_loader[smry_index]->rootname();
-        else if (m_file_type[smry_index] == FileType::ESMRY)
-            title = m_ext_esmry_loader[smry_index]->rootname();
-
-        legende_rootn = false;
-    }
 
     if ( name_set.size() == 1 ) {
         if ( title.size() == 0 )
@@ -1527,15 +1512,12 @@ void SmryAppl::update_chart_title_and_legend ( int chart_ind )
         int smry_ind = std::get<0> ( series_props[n] );
         SmryAppl::vectorEntry ve = std::get<2> ( series_props[n] );
 
-        if ( legende_rootn ) {
-            if (smry_ind < 0)
-               legende_string = "Derived";
-            else if (m_file_type[smry_ind] == FileType::SMSPEC)
-               legende_string = m_esmry_loader[smry_ind]->rootname();
-            else if (m_file_type[smry_ind] == FileType::ESMRY)
-               legende_string = m_ext_esmry_loader[smry_ind]->rootname();
-
-        }
+        if (smry_ind < 0)
+            legende_string = "Derived";
+        else if (m_file_type[smry_ind] == FileType::SMSPEC)
+            legende_string = m_esmry_loader[smry_ind]->rootname();
+        else if (m_file_type[smry_ind] == FileType::ESMRY)
+            legende_string = m_ext_esmry_loader[smry_ind]->rootname();
 
         if ( legende_name )
             if ( legende_string.size() == 0 )
@@ -1558,18 +1540,13 @@ void SmryAppl::update_chart_title_and_legend ( int chart_ind )
         series[chart_ind][n]->setName ( QString::fromStdString ( legende_string ) );
     }
 
-    while ( title.back() == ':' ) {
+    while ( !title.empty() && title.back() == ':' ) {
         title = title.substr ( 0, title.size() - 1 );
     }
 
     chartList[chart_ind]->setTitle ( QString::fromStdString ( title ) );
 
-    if ( ( not legende_rootn ) and ( not legende_name ) and ( not legende_item1 ) and ( not legende_item2 ) ) {
-        chartList[chart_ind]->legend()->hide();
-    } else {
-        chartList[chart_ind]->legend()->show();
-        chartList[chart_ind]->legend()->setAlignment ( Qt::AlignBottom );
-    }
+    chart_view_list[chart_ind]->set_legend_visible(true);
 }
 
 
@@ -1974,46 +1951,19 @@ void SmryAppl::initColorAndStyle()
 {
     linew = 2;
 
+    const std::vector<QColor> colors = {
+        QColor("black"), QColor(21, 150, 0), QColor(220, 64, 35),
+        QColor("blue"), QColor("darkCyan"), QColor(180, 110, 0),
+        QColor("magenta"), QColor(110, 70, 170), QColor("gray"),
+        QColor(150, 80, 60)
+    };
 
-    QColor green;
-    QColor sandy;
-    QColor red;
-
-    green.setRgb ( 21,171,0 );
-    sandy.setRgb ( 244,164,96 );
-    red.setRgb ( 255,64,35 );
-
-    color_tab.push_back ( QColor ( "black" ) );
-    color_tab.push_back ( green );
-    color_tab.push_back ( red );
-    color_tab.push_back ( QColor ( "blue" ) );
-    color_tab.push_back ( QColor ( "cyan" ) );
-    color_tab.push_back ( QColor ( "gray" ) );
-    color_tab.push_back ( QColor ( "magenta" ) );
-    color_tab.push_back ( QColor ( "violet" ) );
-    color_tab.push_back ( QColor ( "darkBlue" ) );
-    color_tab.push_back ( QColor ( "darkCyan" ) );
-    color_tab.push_back ( QColor ( "darkMagenta" ) );
-
-    //color_tab.push_back ( sandy );
-    //color_tab.push_back ( QColor ( "violet" ) );
-
-    style_tab.push_back ( Qt::SolidLine );
-    style_tab.push_back ( Qt::DotLine );
-    style_tab.push_back ( Qt::DotLine );
-    style_tab.push_back ( Qt::DotLine );
-    style_tab.push_back ( Qt::DotLine );
-    style_tab.push_back ( Qt::DotLine );
-    style_tab.push_back ( Qt::DotLine );
-    style_tab.push_back ( Qt::DotLine );
-    style_tab.push_back ( Qt::DotLine );
-    style_tab.push_back ( Qt::DotLine );
-    style_tab.push_back ( Qt::DotLine );
-
-    //style_tab.push_back(Qt::DashLine);
-    //style_tab.push_back(Qt::DashDotLine);
-    //style_tab.push_back(Qt::DotDashLine);
-
+    for (auto style : {Qt::SolidLine, Qt::DashLine, Qt::DotLine}) {
+        for (const auto& color : colors) {
+            color_tab.push_back(color);
+            style_tab.push_back(style);
+        }
+    }
 }
 
 
@@ -2940,11 +2890,14 @@ void SmryAppl::command_modified ( const QString & txt )
 
     } else if ( is_number ( str1 ) ) {
 
-        le_commands->setText ( QString::fromStdString ( str1 + ";" ) );
+        std::string case_number = str1;
+        if (p1 > 0 && str_var[p1 - 1] == ';')
+            case_number = str_var.substr(0, p1 - 1) + str1;
 
-        smry_ind = std::stoi ( str1 ) -1 ;
+        smry_ind = std::stoi ( case_number ) -1 ;
 
-        str_var = str_var + ";";
+        str_var = case_number + ";";
+        le_commands->setText ( QString::fromStdString ( str_var ) );
 
         p1 = str_var.size();
         p2 = p1;

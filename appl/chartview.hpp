@@ -21,6 +21,7 @@
 
 #include <QtCharts/QChartView>
 #include <QtWidgets/QRubberBand>
+#include <QGraphicsItemGroup>
 
 #include<appl/xaxis_ticks.hpp>
 
@@ -38,6 +39,8 @@ public:
     void update_graphics();
     void hide_xaxis_obj();
     void show_xaxis_obj();
+    void set_legend_visible(bool visible);
+    void update_legend();
 
 protected:
 
@@ -46,6 +49,8 @@ protected:
 
 
 private:
+    int layout_legend(qreal font_scale);
+
     bool m_isTouching;
     QWidget *m_parent;
 
@@ -53,6 +58,10 @@ private:
 
     XaxisTicks *m_xaxis_obj;
     std::vector<std::tuple<std::string, double>> m_xaxis_ticks;
+    QGraphicsItemGroup *m_legend;
+    bool m_legend_visible = false;
+    bool m_updating_legend = false;
+    qreal m_non_plot_height = 100;
 };
 
 #endif
